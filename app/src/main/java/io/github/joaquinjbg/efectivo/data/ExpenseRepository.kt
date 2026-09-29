@@ -51,6 +51,31 @@ class ExpenseRepository(
         return expenseDao.totalBetween(from, until)
     }
 
+    fun observeTotalOfWeek(date: LocalDate): Flow<Long> {
+        val (from, until) = TimeRanges.week(date, zone)
+        return expenseDao.observeTotalBetween(from, until)
+    }
+
+    suspend fun totalOfWeek(date: LocalDate): Long {
+        val (from, until) = TimeRanges.week(date, zone)
+        return expenseDao.totalBetween(from, until)
+    }
+
+    fun observeTotalOfMonth(month: YearMonth): Flow<Long> {
+        val (from, until) = TimeRanges.month(month, zone)
+        return expenseDao.observeTotalBetween(from, until)
+    }
+
+    suspend fun totalOfMonth(month: YearMonth): Long {
+        val (from, until) = TimeRanges.month(month, zone)
+        return expenseDao.totalBetween(from, until)
+    }
+
+    suspend fun expensesOn(date: LocalDate): List<ExpenseWithCategory> {
+        val (from, until) = TimeRanges.day(date, zone)
+        return expenseDao.betweenWithCategory(from, until)
+    }
+
     fun observeAllExpenses(): Flow<List<ExpenseWithCategory>> = expenseDao.observeAllWithCategory()
 
     /** History grouped by day, newest day first, each with its own total. */

@@ -96,6 +96,9 @@ class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
             store.sorted(list.filter { it.timestamp in from until until }).map(store::join)
         }
 
+    override suspend fun betweenWithCategory(from: Long, until: Long): List<ExpenseWithCategory> =
+        store.sorted(store.expenses.value.filter { it.timestamp in from until until }).map(store::join)
+
     override suspend fun latestWithCategory(): ExpenseWithCategory? =
         store.sorted(store.expenses.value).firstOrNull()?.let(store::join)
 

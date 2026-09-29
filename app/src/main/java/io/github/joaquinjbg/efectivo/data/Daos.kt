@@ -78,6 +78,15 @@ interface ExpenseDao {
         "SELECT e.id, e.amountCents, e.categoryId, e.timestamp, e.note, e.source, " +
             "c.name AS categoryName, c.emoji AS categoryEmoji " +
             "FROM expenses e JOIN categories c ON c.id = e.categoryId " +
+            "WHERE e.timestamp >= :from AND e.timestamp < :until " +
+            "ORDER BY e.timestamp DESC, e.id DESC"
+    )
+    suspend fun betweenWithCategory(from: Long, until: Long): List<ExpenseWithCategory>
+
+    @Query(
+        "SELECT e.id, e.amountCents, e.categoryId, e.timestamp, e.note, e.source, " +
+            "c.name AS categoryName, c.emoji AS categoryEmoji " +
+            "FROM expenses e JOIN categories c ON c.id = e.categoryId " +
             "ORDER BY e.timestamp DESC, e.id DESC LIMIT 1"
     )
     suspend fun latestWithCategory(): ExpenseWithCategory?

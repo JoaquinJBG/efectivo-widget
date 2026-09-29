@@ -163,6 +163,51 @@ class ExpenseRepositoryTest {
     }
 
     @Test
+    fun `week total runs monday to sunday`() = runTest {
+        val anyDay = LocalDate.of(2026, 9, 29)
+        val monday = anyDay.with(java.time.DayOfWeek.MONDAY)
+
+        repository.addExpense(500, cafe, null, ExpenseSource.APP, at(monday.minusDays(1)))
+        repository.addExpense(100, cafe, null, ExpenseSource.WIDGET, at(monday))
+        repository.addExpense(200, ocio, null, ExpenseSource.WIDGET, at(monday.plusDays(3)))
+        repository.addExpense(300, gasoil, null, ExpenseSource.APP, at(monday.plusDays(6)))
+        repository.addExpense(900, cafe, null, ExpenseSource.APP, at(monday.plusDays(7)))
+
+        assertEquals(600L, repository.totalOfWeek(anyDay))
+        assertEquals(600L, repository.observeTotalOfWeek(anyDay).first())
+        // Any day of that week gives the same number.
+        assertEquals(600L, repository.totalOfWeek(monday.plusDays(6)))
+    }
+
+    @Test
+    fun `month total matches the monthly summary total`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        repository.addExpense(200, cafe, null, ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 2)))
+        repository.addExpense(1500, ocio, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 20)))
+        repository.addExpense(700, gasoil, null, ExpenseSource.APP, at(LocalDate.of(2026, 10, 1)))
+
+        assertEquals(1700L, repository.totalOfMonth(september))
+        assertEquals(1700L, repository.observeTotalOfMonth(september).first())
+        assertEquals(
+            repository.observeMonthlySummary(september).first().totalCents,
+            repository.totalOfMonth(september),
+        )
+    }
+
+    @Test
+    fun `expenses of a day are newest first`() = runTest {
+        val day = LocalDate.of(2026, 9, 29)
+        repository.addExpense(100, cafe, null, ExpenseSource.WIDGET, at(day, 8))
+        repository.addExpense(200, ocio, "cine", ExpenseSource.APP, at(day, 20))
+        repository.addExpense(300, gasoil, null, ExpenseSource.APP, at(day.plusDays(1), 9))
+
+        val rows = repository.expensesOn(day)
+
+        assertEquals(listOf(200L, 100L), rows.map { it.amountCents })
+        assertEquals("cine", rows.first().note)
+    }
+
+    @Test
     fun `empty month has zero total and no breakdown`() = runTest {
         val summary = repository.observeMonthlySummary(YearMonth.of(2026, 1)).first()
 

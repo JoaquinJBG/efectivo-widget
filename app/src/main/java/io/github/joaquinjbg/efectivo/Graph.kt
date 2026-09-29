@@ -1,9 +1,11 @@
 package io.github.joaquinjbg.efectivo
 
 import android.content.Context
+import androidx.glance.appwidget.updateAll
 import io.github.joaquinjbg.efectivo.data.EfectivoDatabase
 import io.github.joaquinjbg.efectivo.data.ExpenseRepository
 import io.github.joaquinjbg.efectivo.data.Seed
+import io.github.joaquinjbg.efectivo.widget.EfectivoWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +31,8 @@ object Graph {
             cashDao = db.cashMovementDao(),
             categoryDao = db.categoryDao(),
             quickButtonDao = db.quickButtonDao(),
+            // Every write, from the app or from the widget, refreshes the widget.
+            onChanged = { EfectivoWidget.updateAll(appContext) },
         )
     }
 

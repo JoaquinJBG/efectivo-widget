@@ -109,6 +109,38 @@ class ExpenseRepositoryTest {
     }
 
     @Test
+    fun `undo stages the header message before deleting and notifying`() = runTest {
+        val events = mutableListOf<String>()
+        val repo = ExpenseRepository(
+            expenseDao = FakeExpenseDao(store),
+            cashDao = FakeCashDao(store),
+            categoryDao = FakeCategoryDao(store),
+            quickButtonDao = FakeQuickButtonDao(store),
+            zone = zone,
+            onChanged = { events += "refresh" },
+        )
+        repo.addExpense(200, cafe, null, ExpenseSource.WIDGET)
+        events.clear()
+
+        repo.undoLastExpense { latest -> events += "message:" + latest.categoryName }
+
+        // The message must be staged first, so the single refresh paints it together
+        // with the new balance.
+        assertEquals(listOf("message:Café", "refresh"), events)
+        assertEquals(0, repo.observeAllExpenses().first().size)
+    }
+
+    @Test
+    fun `undo skips the hook when there is nothing to delete`() = runTest {
+        var hookCalls = 0
+
+        val undone = repository.undoLastExpense { hookCalls++ }
+
+        assertNull(undone)
+        assertEquals(0, hookCalls)
+    }
+
+    @Test
     fun `monthly breakdown sums per category and shares add up`() = runTest {
         val september = YearMonth.of(2026, 9)
         repository.addExpense(200, cafe, null, ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 1)))

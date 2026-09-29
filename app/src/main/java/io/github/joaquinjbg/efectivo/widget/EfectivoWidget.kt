@@ -37,6 +37,7 @@ import io.github.joaquinjbg.efectivo.Graph
 import io.github.joaquinjbg.efectivo.data.QuickButton
 import io.github.joaquinjbg.efectivo.ui.quick.QuickEntryActivity
 import io.github.joaquinjbg.efectivo.util.Money
+import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 
 private const val COLUMNS = 3
@@ -47,22 +48,35 @@ object EfectivoWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val repository = Graph.repository(context)
-        provideContent {
-            val balance by repository.observeBalance().collectAsState(initial = 0L)
-            val today by repository.observeTotalOn(LocalDate.now()).collectAsState(initial = 0L)
-            val buttons by repository.observeEnabledQuickButtons()
-                .collectAsState(initial = emptyList())
-            val message = currentState(WidgetMessageKey)
+        // One combined flow instead of three: a redraw costs a single emission.
+        val data = combine(
+            repository.observeBalance(),
+            repository.observeTotalOn(LocalDate.now()),
+            repository.observeEnabledQuickButtons(),
+        ) { balance, today, buttons -> WidgetData(balance, today, buttons) }
+        val initial = WidgetData(
+            balanceCents = repository.balance(),
+            todayCents = repository.totalOn(LocalDate.now()),
+            buttons = repository.enabledQuickButtons(),
+        )
 
+        provideContent {
+            val state by data.collectAsState(initial = initial)
             WidgetContent(
-                balanceCents = balance,
-                todayCents = today,
-                buttons = buttons,
-                message = message,
+                balanceCents = state.balanceCents,
+                todayCents = state.todayCents,
+                buttons = state.buttons,
+                message = currentState(WidgetMessageKey),
             )
         }
     }
 }
+
+private data class WidgetData(
+    val balanceCents: Long = 0L,
+    val todayCents: Long = 0L,
+    val buttons: List<QuickButton> = emptyList(),
+)
 
 @Composable
 private fun WidgetContent(

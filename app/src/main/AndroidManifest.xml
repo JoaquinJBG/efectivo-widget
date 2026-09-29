@@ -24,6 +24,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".ui.quick.QuickEntryActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Efectivo.Transparent"
+            android:windowSoftInputMode="adjustResize" />
+
         <receiver
             android:name=".widget.EfectivoWidgetReceiver"
             android:exported="true"

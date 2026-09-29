@@ -12,10 +12,12 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.action.actionParametersOf
 import androidx.glance.background
+import androidx.glance.LocalContext
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -33,6 +35,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import io.github.joaquinjbg.efectivo.Graph
 import io.github.joaquinjbg.efectivo.data.QuickButton
+import io.github.joaquinjbg.efectivo.ui.quick.QuickEntryActivity
 import io.github.joaquinjbg.efectivo.util.Money
 import java.time.LocalDate
 
@@ -91,13 +94,16 @@ private fun WidgetContent(
             Spacer(GlanceModifier.height(6.dp))
         }
 
+        val context = LocalContext.current
         Row(modifier = GlanceModifier.fillMaxWidth()) {
             ActionCell(
                 label = "Otro…",
                 modifier = GlanceModifier.defaultWeight(),
                 background = WidgetColors.key,
                 textColor = WidgetColors.onDark,
-                action = GlanceModifier,
+                action = GlanceModifier.clickable(
+                    actionStartActivity(QuickEntryActivity.intent(context, categoryId = null))
+                ),
             )
             Spacer(GlanceModifier.width(6.dp))
             ActionCell(
@@ -165,6 +171,7 @@ private fun QuickButtonCell(button: QuickButton, modifier: GlanceModifier) {
     val amountLabel = button.fixedAmountCents
         ?.let { Money.formatShort(it) }
         ?: "…"
+    val context = LocalContext.current
     val action = if (button.fixedAmountCents != null) {
         GlanceModifier.clickable(
             actionRunCallback<QuickAddAction>(
@@ -172,7 +179,10 @@ private fun QuickButtonCell(button: QuickButton, modifier: GlanceModifier) {
             )
         )
     } else {
-        GlanceModifier
+        // "Ask for amount" buttons open the quick-entry dialog with their category preselected.
+        GlanceModifier.clickable(
+            actionStartActivity(QuickEntryActivity.intent(context, button.categoryId))
+        )
     }
     Column(
         modifier = modifier

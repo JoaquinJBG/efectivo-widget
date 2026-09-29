@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import io.github.joaquinjbg.efectivo.ui.history.HistoryScreen
 import io.github.joaquinjbg.efectivo.ui.home.HomeScreen
 import io.github.joaquinjbg.efectivo.ui.month.MonthScreen
+import io.github.joaquinjbg.efectivo.ui.settings.WidgetButtonsScreen
 
 private enum class Destination(
     val route: String,
@@ -33,6 +35,7 @@ private enum class Destination(
     HOME("home", "Inicio", Icons.Filled.Home),
     HISTORY("history", "Historial", Icons.AutoMirrored.Filled.List),
     MONTH("month", "Mes", Icons.Filled.CalendarMonth),
+    SETTINGS("settings", "Botones", Icons.Filled.Settings),
 }
 
 @Composable
@@ -79,6 +82,7 @@ fun EfectivoRoot() {
             composable(Destination.HOME.route) { HomeScreen() }
             composable(Destination.HISTORY.route) { HistoryScreen() }
             composable(Destination.MONTH.route) { MonthScreen() }
+            composable(Destination.SETTINGS.route) { WidgetButtonsScreen() }
         }
     }
 }

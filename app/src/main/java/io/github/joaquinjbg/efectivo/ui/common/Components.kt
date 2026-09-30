@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import io.github.joaquinjbg.efectivo.data.Category
 import io.github.joaquinjbg.efectivo.util.Money
 
-/** The big number at the top of an entry sheet. */
+/** El número grande de la parte de arriba de la hoja de entrada. */
 @Composable
 fun AmountDisplay(input: AmountInput, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {

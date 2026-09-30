@@ -35,7 +35,7 @@ import io.github.joaquinjbg.efectivo.ui.common.Keypad
 import io.github.joaquinjbg.efectivo.ui.common.rememberAmountInput
 import io.github.joaquinjbg.efectivo.util.Money
 
-/** Create or edit one widget button. */
+/** Crear o editar un botón del widget. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickButtonEditorSheet(

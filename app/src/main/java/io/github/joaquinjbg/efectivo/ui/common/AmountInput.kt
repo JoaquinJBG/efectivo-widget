@@ -8,7 +8,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import io.github.joaquinjbg.efectivo.util.Money
 
-/** Editing state for the custom numeric keypad. Keeps the raw "12,50" text. */
+/** Estado de edición del teclado numérico. Guarda el texto tal cual: "12,50". */
 class AmountInput(initial: String = "") {
 
     var text by mutableStateOf(initial)
@@ -20,7 +20,7 @@ class AmountInput(initial: String = "") {
     val isEmpty: Boolean
         get() = text.isEmpty()
 
-    /** Text shown on screen; an empty input reads as "0,00". */
+    /** Lo que se ve en pantalla; si no hay nada escrito, "0". */
     val display: String
         get() = if (text.isEmpty()) "0" else text
 

@@ -47,8 +47,8 @@ import io.github.joaquinjbg.efectivo.util.Haptics
 import io.github.joaquinjbg.efectivo.util.Money
 
 /**
- * Transparent dialog launched straight from the widget. Uses the custom [Keypad]
- * so there is no system-keyboard pop-up delay.
+ * Diálogo transparente que se abre directamente desde el widget. Usa el [Keypad] propio
+ * para no esperar a que salga el teclado del sistema.
  */
 class QuickEntryActivity : ComponentActivity() {
 

@@ -79,7 +79,7 @@ class ExpenseRepositoryTest {
         val middle = repository.addExpense(500, ocio, null, ExpenseSource.WIDGET, at(today, 10))
         repository.addExpense(5000, gasoil, null, ExpenseSource.APP, at(today, 11))
 
-        // The widget deletes by row, so any of them can go, not just the newest.
+        // El widget borra por fila, así que puede caer cualquiera, no solo el último.
         repository.deleteExpense(middle)
 
         val remaining = repository.observeAllExpenses().first()
@@ -113,7 +113,7 @@ class ExpenseRepositoryTest {
         repository.addExpense(200, cafe, null, ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 1)))
         repository.addExpense(300, cafe, null, ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 15)))
         repository.addExpense(1500, ocio, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 20)))
-        // Outside the month, must be ignored.
+        // Fuera del mes: no deben contar.
         repository.addExpense(9999, gasoil, null, ExpenseSource.APP, at(LocalDate.of(2026, 8, 31)))
         repository.addExpense(8888, gasoil, null, ExpenseSource.APP, at(LocalDate.of(2026, 10, 1)))
 
@@ -142,7 +142,7 @@ class ExpenseRepositoryTest {
 
         assertEquals(600L, repository.totalOfWeek(anyDay))
         assertEquals(600L, repository.observeTotalOfWeek(anyDay).first())
-        // Any day of that week gives the same number.
+        // Cualquier día de esa semana da el mismo número.
         assertEquals(600L, repository.totalOfWeek(monday.plusDays(6)))
     }
 

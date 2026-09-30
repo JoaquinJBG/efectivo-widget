@@ -1,11 +1,21 @@
-*.iml
+# Gradle
 .gradle/
-local.properties
-.idea/
-.DS_Store
 build/
+local.properties
+
+# Android
+*.apk
+*.aab
+*.keystore
 captures/
 .externalNativeBuild/
 .cxx/
-*.apk
-*.keystore
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# Sistema
+.DS_Store
+Thumbs.db

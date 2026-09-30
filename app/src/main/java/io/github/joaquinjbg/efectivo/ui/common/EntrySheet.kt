@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import io.github.joaquinjbg.efectivo.data.Category
 
 /**
- * Bottom sheet used by Home for both "new expense" and "add cash".
- * The amount always comes from the custom [Keypad], never from the system IME.
+ * Hoja inferior que usa Inicio tanto para "nuevo gasto" como para "añadir efectivo".
+ * El importe sale siempre del [Keypad] propio, nunca del teclado del sistema.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -10,7 +10,7 @@ import io.github.joaquinjbg.efectivo.ui.month.MonthViewModel
 import io.github.joaquinjbg.efectivo.ui.quick.QuickEntryViewModel
 import io.github.joaquinjbg.efectivo.ui.settings.WidgetButtonsViewModel
 
-/** One factory for every screen; the repository is process-wide. */
+/** Una sola factoría para todas las pantallas; el repositorio es único por proceso. */
 val AppViewModelFactory = viewModelFactory {
     initializer { HomeViewModel(Graph.repository(this[APPLICATION_KEY]!!)) }
     initializer { HistoryViewModel(Graph.repository(this[APPLICATION_KEY]!!)) }

@@ -9,11 +9,11 @@ import android.os.Vibrator
 import android.os.VibratorManager
 
 /**
- * Short confirmation buzz after a write.
+ * Vibración corta de confirmación después de escribir.
  *
- * A widget callback runs with the process in the background, and Android drops vibrations
- * that arrive without a usage the system recognises as touch feedback — so the attributes
- * below are load-bearing, not decoration.
+ * El callback de un widget corre con el proceso en segundo plano, y Android descarta las
+ * vibraciones que llegan sin un "usage" que reconozca como respuesta táctil: los atributos
+ * de abajo no son decoración, sin ellos no vibra.
  */
 object Haptics {
 
@@ -25,7 +25,7 @@ object Haptics {
         }
 
         val effect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // The stock click haptic: crisper than a raw duration on a linear motor.
+            // El clic estándar: más seco que una duración cruda en un motor lineal.
             VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
         } else {
             VibrationEffect.createOneShot(40, VibrationEffect.DEFAULT_AMPLITUDE)

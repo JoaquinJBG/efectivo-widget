@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
-/** In-memory stand-ins for the Room DAOs so the repository can be tested on the JVM. */
+/** Dobles en memoria de los DAO de Room, para probar el repositorio en la JVM. */
 class FakeStore {
     val categories = MutableStateFlow<List<Category>>(emptyList())
     val expenses = MutableStateFlow<List<Expense>>(emptyList())
@@ -102,8 +102,6 @@ class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
         store.expenses.value = store.expenses.value.filterNot { it.id == id }
     }
 
-    override suspend fun getById(id: Long): Expense? = store.expenses.value.find { it.id == id }
-
     override fun observeTotal(): Flow<Long> = store.expenses.map { list -> list.sumOf { it.amountCents } }
 
     override suspend fun total(): Long = store.expenses.value.sumOf { it.amountCents }
@@ -124,9 +122,6 @@ class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
 
     override suspend fun betweenWithCategory(from: Long, until: Long): List<ExpenseWithCategory> =
         store.sorted(store.expenses.value.filter { it.timestamp in from until until }).map(store::join)
-
-    override suspend fun latestWithCategory(): ExpenseWithCategory? =
-        store.sorted(store.expenses.value).firstOrNull()?.let(store::join)
 
     private fun totals(
         dayFrom: Long, dayUntil: Long,

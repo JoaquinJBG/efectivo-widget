@@ -2,7 +2,7 @@ package io.github.joaquinjbg.efectivo.util
 
 import kotlin.math.absoluteValue
 
-/** Spanish money formatting: 1234567 cents -> "12.345,67 €". */
+/** Formato de importes en español: 1234567 céntimos -> "12.345,67 €". */
 object Money {
 
     /**
@@ -20,7 +20,7 @@ object Money {
         return "$sign${groupThousands(units)},${decimals.toString().padStart(2, '0')}"
     }
 
-    /** Short form used on widget buttons: "2 €" when whole, "2,50 €" otherwise. */
+    /** Forma corta para los botones del widget: "2 €" si es entero, "2,50 €" si no. */
     fun formatShort(cents: Long, spaced: Boolean = true): String {
         val abs = cents.absoluteValue
         val gap = if (spaced) " " else ""
@@ -43,8 +43,8 @@ object Money {
     }
 
     /**
-     * Parses what the custom keypad produced ("12", "12,5", "12,50", "" -> null).
-     * Only digits and a single comma are expected.
+     * Interpreta lo que ha escrito el teclado propio ("12", "12,5", "12,50", "" -> null).
+     * Solo se esperan dígitos y una única coma.
      */
     fun parse(text: String): Long? {
         if (text.isBlank()) return null

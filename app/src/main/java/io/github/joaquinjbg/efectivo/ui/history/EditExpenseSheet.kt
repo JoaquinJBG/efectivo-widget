@@ -30,7 +30,7 @@ import io.github.joaquinjbg.efectivo.ui.common.Keypad
 import io.github.joaquinjbg.efectivo.ui.common.rememberAmountInput
 import io.github.joaquinjbg.efectivo.util.Money
 
-/** Edit sheet opened by tapping a history row. */
+/** Hoja de edición que se abre al tocar una fila del historial. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditExpenseSheet(

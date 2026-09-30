@@ -9,9 +9,9 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 /**
- * Single access point to the data. The balance is always derived, never stored.
+ * Único punto de acceso a los datos. El saldo siempre se calcula, nunca se guarda.
  *
- * [onChanged] is invoked after every write so the caller can refresh the widget.
+ * [onChanged] se llama después de cada escritura para que el llamante refresque el widget.
  */
 class ExpenseRepository(
     private val expenseDao: ExpenseDao,
@@ -23,7 +23,7 @@ class ExpenseRepository(
     private val onChanged: suspend () -> Unit = {},
 ) {
 
-    // ---- reads ----
+    // ---- lecturas ----
 
     fun observeBalance(): Flow<Long> =
         combine(cashDao.observeTotal(), expenseDao.observeTotal()) { cash, spent -> cash - spent }
@@ -51,7 +51,7 @@ class ExpenseRepository(
         return expenseDao.totalBetween(from, until)
     }
 
-    /** Balance, day, week and month in a single query — used by the widget. */
+    /** Saldo, día, semana y mes en una sola consulta: lo que usa el widget. */
     fun observeWidgetTotals(date: LocalDate, month: YearMonth): Flow<WidgetTotals> {
         val (dayFrom, dayUntil) = TimeRanges.day(date, zone)
         val (weekFrom, weekUntil) = TimeRanges.week(date, zone)
@@ -97,7 +97,7 @@ class ExpenseRepository(
 
     fun observeAllExpenses(): Flow<List<ExpenseWithCategory>> = expenseDao.observeAllWithCategory()
 
-    /** History grouped by day, newest day first, each with its own total. */
+    /** Historial por días, del más reciente al más antiguo, cada uno con su total. */
     fun observeExpensesByDay(): Flow<List<DaySection>> =
         expenseDao.observeAllWithCategory().map { expenses ->
             expenses
@@ -135,13 +135,11 @@ class ExpenseRepository(
         }
     }
 
-    suspend fun expenseById(id: Long): Expense? = expenseDao.getById(id)
-
     suspend fun quickButtonById(id: Long): QuickButton? = quickButtonDao.getById(id)
 
     suspend fun categories(): List<Category> = categoryDao.getAll()
 
-    // ---- writes ----
+    // ---- escrituras ----
 
     suspend fun addExpense(
         amountCents: Long,
@@ -185,7 +183,7 @@ class ExpenseRepository(
         return id
     }
 
-    // ---- quick buttons ----
+    // ---- botones del widget ----
 
     /**
      * Un botón normal ES su categoría: al crearlo se crea, al renombrarlo se renombra y
@@ -245,7 +243,7 @@ class ExpenseRepository(
         onChanged()
     }
 
-    /** Persists [buttons] in the given order as sortOrder 0..n-1. */
+    /** Guarda [buttons] en el orden dado, como sortOrder 0..n-1. */
     suspend fun reorderQuickButtons(buttons: List<QuickButton>) {
         quickButtonDao.updateAll(buttons.mapIndexed { index, b -> b.copy(sortOrder = index) })
         onChanged()

@@ -51,9 +51,6 @@ interface ExpenseDao {
     @Query("DELETE FROM expenses WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("SELECT * FROM expenses WHERE id = :id")
-    suspend fun getById(id: Long): Expense?
-
     @Query("SELECT COALESCE(SUM(amountCents), 0) FROM expenses")
     fun observeTotal(): Flow<Long>
 
@@ -97,14 +94,6 @@ interface ExpenseDao {
             "ORDER BY e.timestamp DESC, e.id DESC"
     )
     suspend fun betweenWithCategory(from: Long, until: Long): List<ExpenseWithCategory>
-
-    @Query(
-        "SELECT e.id, e.amountCents, e.categoryId, e.timestamp, e.note, e.source, " +
-            "c.name AS categoryName, c.emoji AS categoryEmoji " +
-            "FROM expenses e JOIN categories c ON c.id = e.categoryId " +
-            "ORDER BY e.timestamp DESC, e.id DESC LIMIT 1"
-    )
-    suspend fun latestWithCategory(): ExpenseWithCategory?
 
     @Query(
         "SELECT " +
@@ -206,7 +195,7 @@ interface QuickButtonDao {
     @Query("DELETE FROM quick_buttons WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    /** Otros botones normales que comparten esta categoría. */
+    /** Cuántos botones normales más comparten esta categoría. */
     @Query(
         "SELECT COUNT(*) FROM quick_buttons " +
             "WHERE categoryId = :categoryId AND compact = 0 AND id != :exceptId"

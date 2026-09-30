@@ -4,9 +4,9 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * Timings for the widget's tap -> write -> redraw cycle.
+ * Cronómetro del ciclo del widget: toque -> escritura -> repintado.
  *
- * Silent unless someone turns it on:
+ * Callado salvo que se active a mano:
  *     adb shell setprop log.tag.EfectivoPerf DEBUG
  */
 object Perf {
@@ -17,7 +17,7 @@ object Perf {
 
     fun now(): Long = SystemClock.elapsedRealtime()
 
-    /** Logs how long it has been since [startedAt]. */
+    /** Registra cuánto ha pasado desde [startedAt]. */
     fun step(label: String, startedAt: Long) {
         if (enabled) Log.d(TAG, "$label +${now() - startedAt} ms")
     }

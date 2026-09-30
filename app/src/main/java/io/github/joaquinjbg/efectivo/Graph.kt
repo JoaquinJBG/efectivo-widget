@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-/** Manual wiring: one database and one repository for the whole process. */
+/** Montaje a mano: una base de datos y un repositorio para todo el proceso. */
 object Graph {
 
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -31,7 +31,7 @@ object Graph {
             cashDao = db.cashMovementDao(),
             categoryDao = db.categoryDao(),
             quickButtonDao = db.quickButtonDao(),
-            // Every write, from the app or from the widget, refreshes the widget.
+            // Toda escritura, venga de la app o del widget, refresca el widget.
             onChanged = { EfectivoWidget.updateAll(appContext) },
         )
     }

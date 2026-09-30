@@ -6,7 +6,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 
-/** Half-open epoch-millis ranges [start, end) for calendar days and months. */
+/** Rangos [inicio, fin) en milisegundos, para días y meses naturales. */
 object TimeRanges {
 
     fun day(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
@@ -15,7 +15,7 @@ object TimeRanges {
         return start to end
     }
 
-    /** Monday 00:00 of [date]'s week, up to the following Monday. */
+    /** Del lunes a las 00:00 de la semana de [date] hasta el lunes siguiente. */
     fun week(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
         val monday = date.with(DayOfWeek.MONDAY)
         val start = monday.atStartOfDay(zone).toInstant().toEpochMilli()

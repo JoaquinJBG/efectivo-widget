@@ -1,6 +1,6 @@
 package io.github.joaquinjbg.efectivo.data
 
-/** First-launch contents: categories and the default widget buttons. */
+/** Contenido del primer arranque: categorías y botones del widget por defecto. */
 object Seed {
 
     private val categories = listOf(

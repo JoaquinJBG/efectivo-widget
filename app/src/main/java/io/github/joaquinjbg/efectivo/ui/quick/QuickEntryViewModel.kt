@@ -17,8 +17,8 @@ class QuickEntryViewModel(private val repository: ExpenseRepository) : ViewModel
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
-     * Writes on the process-wide scope, not [viewModelScope]: the activity finishes
-     * immediately after confirming and would otherwise cancel the write.
+     * Escribe en el scope del proceso, no en [viewModelScope]: la activity se cierra nada
+     * más confirmar y cancelaría la escritura a medias.
      */
     fun save(amountCents: Long, categoryId: Long, note: String?) {
         Graph.appScope.launch {

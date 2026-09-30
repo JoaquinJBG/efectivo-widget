@@ -50,19 +50,21 @@ import java.time.LocalDate
 import java.time.YearMonth
 
 /*
- * Layout, top to bottom:
+ * Disposición, de arriba abajo:
  *
- *   [ Efectivo 90 ]        [ Hoy 42 ]      two separate cards
- *   [ Semana 68        Mes 490       ]     one wide card
- *   [ ☕  ] [ 🥐  ] [ ⛽  ] [ 🎉  ]        square category tiles
- *   [ 1 ][ 2 ][ 5 ][ 10 ][ 20 ][ 50 ]      small coin buttons, own row
- *   [   Otro…    ] [   Deshacer      ]
- *   [ historial del día                ]   takes whatever is left
+ *   [ Efectivo 90 ]        [ Hoy 42 ]      dos tarjetas sueltas
+ *   [ Semana 68 ]          [ Mes 490 ]     otras dos
+ *   [ ☕ ] [ 🥐 ] [ ⛽ ] [ 🎉 ]            baldosas de categoría
+ *   [ 1€ ][ 2€ ][ 5€ ][ 10€ ][ 20€ ]       monedas, en su propia fila
+ *   [ historial del día                ]   se queda con lo que sobre
  *
- * Two hard constraints shape this file:
- *  - Glance only ships container layouts for up to 10 children and drops the rest in
- *    silence, so each band lives in its own nested container.
- *  - RemoteViews cannot measure itself, so the sizes below are estimates in dp.
+ * Dos límites de Glance condicionan todo este fichero:
+ *
+ *  - Solo trae layouts de contenedor para 10 hijos como máximo, y descarta el resto
+ *    sin avisar. Por eso cada banda vive en su contenedor anidado, y por eso los
+ *    huecos se hacen con Spacer y no encadenando padding.
+ *  - RemoteViews no puede medirse a sí mismo, así que el reparto vertical se calcula
+ *    con estimaciones en dp de lo que ocupa cada bloque.
  */
 
 private data class WidgetLayout(
@@ -93,7 +95,7 @@ private const val MIN_COLUMNS = 2
 private const val MAX_CATEGORY_COLUMNS = 6
 private const val MAX_COIN_COLUMNS = 8
 
-/** Por encima de esto, una fila de monedas se parte en dos grupos (ver CoinRow). */
+/** A partir de aquí, una fila de monedas se parte en dos grupos (ver CoinRow). */
 private const val MAX_COINS_PER_GROUP = 5
 
 private fun columnsFor(usableWidth: Float, minWidth: Float, max: Int): Int =
@@ -108,14 +110,14 @@ private fun layoutFor(
     val compact = heightDp < WidgetStyle.COMPACT_BELOW
     val usableWidth = (widthDp - WidgetStyle.OUTER_PADDING).coerceAtLeast(WidgetStyle.CATEGORY_MIN_WIDTH)
 
-    // Four across is the shape the layout is drawn for; narrow widgets get fewer.
+    // Cuatro por fila es la forma para la que está pensado; si no cabe, menos.
     val categoryColumns = columnsFor(usableWidth, WidgetStyle.CATEGORY_MIN_WIDTH, MAX_CATEGORY_COLUMNS)
         .coerceAtMost(WidgetStyle.CATEGORY_COLUMNS)
-    // Coins fill their row rather than leaving gaps at the end.
+    // Las monedas llenan su fila en vez de dejar huecos al final.
     val coinColumns = columnsFor(usableWidth, WidgetStyle.COIN_MIN_WIDTH, MAX_COIN_COLUMNS)
         .coerceAtMost(maxOf(1, coinCount))
 
-    // A square tile: the side comes from the column width, then gets clamped.
+    // Baldosa cuadrada: el lado sale del ancho de columna y luego se acota.
     val cellWidth = (usableWidth - (categoryColumns - 1) * WidgetStyle.GAP) / categoryColumns
     val side = cellWidth.coerceIn(WidgetStyle.CATEGORY_HEIGHT_MIN, WidgetStyle.CATEGORY_HEIGHT_MAX)
 
@@ -147,8 +149,9 @@ private fun layoutFor(
 object EfectivoWidget : GlanceAppWidget() {
 
     /**
-     * Exact, not Responsive: Responsive makes the launcher pick from declared sizes and
-     * this one kept choosing far smaller than the real slot.
+     * Exact, no Responsive. Con Responsive el launcher elige entre unos tamaños que hay
+     * que declarar, y este escogía uno mucho menor que el hueco real: estiraba un layout
+     * de 240x180 sobre 333x700. Exact compone para el tamaño de verdad.
      */
     override val sizeMode: SizeMode = SizeMode.Exact
 
@@ -361,7 +364,7 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
     }
 }
 
-/** Square tiles, one per non-coin button. */
+/** Baldosas de categoría: una por cada botón que no sea moneda. */
 @Composable
 private fun CategoryGrid(buttons: List<QuickButton>, layout: WidgetLayout) {
     if (buttons.isEmpty()) return
@@ -437,7 +440,7 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
     }
 }
 
-/** Coins and notes: just the amount, in a tight row of their own. */
+/** Monedas y billetes: solo el importe, en una fila aparte más apretada. */
 @Composable
 private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
     if (coins.isEmpty()) return
@@ -472,7 +475,7 @@ private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
     }
 }
 
-/** Mitad de una fila de monedas, con sus propios separadores. */
+/** Media fila de monedas, con sus propios separadores. */
 @Composable
 private fun CoinGroup(coins: List<QuickButton>, modifier: GlanceModifier) {
     Row(modifier = modifier.fillMaxHeight()) {
@@ -523,7 +526,7 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
     }
 }
 
-/** Today's expenses, newest first: concept on the left, amount on the right. */
+/** Los gastos de hoy, del más reciente al más antiguo. */
 @Composable
 private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModifier) {
     Column(
@@ -551,7 +554,7 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
     }
 }
 
-/** One expense: concept, amount, and a ✕ that deletes just that one. */
+/** Un gasto: concepto, importe y una ✕ que borra solo ese. */
 @Composable
 private fun HistoryRow(expense: ExpenseWithCategory) {
     val note = expense.note?.takeIf { it.isNotBlank() }
@@ -595,7 +598,7 @@ private fun HistoryRow(expense: ExpenseWithCategory) {
         Text(
             text = "✕",
             maxLines = 1,
-            // The padding is the touch target: the glyph itself is far too small to hit.
+            // El hueco alrededor es la zona táctil: el aspa sola es imposible de acertar.
             modifier = GlanceModifier
                 .padding(
                     horizontal = WidgetStyle.HISTORY_DELETE_PADDING_H.dp,

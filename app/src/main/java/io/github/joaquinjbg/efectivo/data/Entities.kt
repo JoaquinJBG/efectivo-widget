@@ -39,7 +39,7 @@ data class Expense(
 )
 data class CashMovement(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    /** Positive = cash added (ATM withdrawal); negative = correction downwards. */
+    /** Positivo = efectivo que entra (cajero); negativo = corrección a la baja. */
     val amountCents: Long,
     val timestamp: Long,
     val note: String? = null,
@@ -54,18 +54,18 @@ data class QuickButton(
     val label: String,
     val emoji: String,
     val categoryId: Long,
-    /** null = ask for the amount in the quick-entry dialog. */
+    /** null = preguntar el importe en el diálogo de entrada rápida. */
     val fixedAmountCents: Long?,
     val sortOrder: Int,
     val enabled: Boolean = true,
     /**
-     * Coin and note buttons: drawn small, in their own row under the category grid.
-     * Category buttons get the big square tiles.
+     * Monedas y billetes: se pintan pequeños, en su propia fila bajo las categorías.
+     * Los botones de categoría son las baldosas grandes.
      */
     val compact: Boolean = false,
 )
 
-/** An expense joined with the name/emoji of its category. */
+/** Un gasto junto con el nombre y el emoji de su categoría. */
 data class ExpenseWithCategory(
     val id: Long,
     val amountCents: Long,
@@ -78,10 +78,10 @@ data class ExpenseWithCategory(
 )
 
 /**
- * Every number the widget header needs, in one row.
+ * Todas las cifras de la cabecera del widget, en una sola fila.
  *
- * The widget is the latency-critical surface, so it reads this instead of
- * subscribing to four separate aggregate queries.
+ * El widget es la parte donde la latencia importa, así que lee esto en vez de
+ * suscribirse a cuatro consultas agregadas por separado.
  */
 data class WidgetTotals(
     val balanceCents: Long,
@@ -90,7 +90,7 @@ data class WidgetTotals(
     val monthCents: Long,
 )
 
-/** One row of the monthly breakdown. */
+/** Una línea del desglose mensual. */
 data class CategoryTotal(
     val categoryId: Long,
     val categoryName: String,

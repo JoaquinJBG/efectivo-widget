@@ -26,8 +26,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 /**
- * Custom numeric keypad: 0-9, comma and backspace.
- * Deliberately not the system IME, so there is no keyboard pop-up delay.
+ * Teclado numérico propio: 0-9, coma y borrar.
+ * A propósito no es el del sistema, para que no haya que esperar a que aparezca.
  */
 @Composable
 fun Keypad(

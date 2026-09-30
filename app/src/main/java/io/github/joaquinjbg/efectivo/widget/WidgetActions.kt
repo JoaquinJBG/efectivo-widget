@@ -15,9 +15,9 @@ object WidgetParams {
 }
 
 /**
- * A widget redraw is not instant, so an impatient second tap used to land before the
- * first one showed anything and silently booked the expense twice. Repeat taps on the
- * same control inside this window are dropped.
+ * Repintar el widget no es instantáneo, así que un segundo toque impaciente llegaba antes
+ * de que el primero enseñara nada y apuntaba el gasto dos veces sin avisar. Los toques
+ * repetidos sobre el mismo control dentro de esta ventana se descartan.
  */
 private const val DOUBLE_TAP_GUARD_MILLIS = 1_500L
 
@@ -28,7 +28,7 @@ private object TapGuard {
     @Volatile
     private var lastTapAt: Long = 0L
 
-    /** Returns false when [target] was already tapped within the guard window. */
+    /** Devuelve false si [target] ya se pulsó dentro de la ventana de guarda. */
     @Synchronized
     fun accept(target: String): Boolean {
         val now = SystemClock.elapsedRealtime()
@@ -46,7 +46,7 @@ private object TapGuard {
  * Ahora cada toque es escribir y repintar una vez.
  */
 
-/** Writes the expense for a fixed-amount quick button, with no confirmation step. */
+/** Apunta el gasto de un botón de importe fijo, sin pedir confirmación. */
 class QuickAddAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
@@ -56,7 +56,7 @@ class QuickAddAction : ActionCallback {
         val buttonId = parameters[WidgetParams.buttonId] ?: return
         if (!TapGuard.accept("add:$buttonId")) return
 
-        // Buzz first: the only feedback that does not wait for the database or a redraw.
+        // Vibrar primero: es la única respuesta que no espera ni a la base de datos ni al repintado.
         Haptics.tick(context)
 
         val repository = Graph.repository(context)
@@ -72,7 +72,7 @@ class QuickAddAction : ActionCallback {
     }
 }
 
-/** Deletes one expense straight from its row in the day list. */
+/** Borra un gasto desde su propia fila en la lista del día. */
 class DeleteExpenseAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
@@ -80,8 +80,8 @@ class DeleteExpenseAction : ActionCallback {
         parameters: ActionParameters,
     ) {
         val expenseId = parameters[WidgetParams.expenseId] ?: return
-        // Guarded like the quick buttons: the row moves as soon as the list redraws,
-        // and a second tap would land on whatever took its place.
+        // Con la misma guarda que los botones: la fila se recoloca en cuanto la lista se
+        // repinta, y un segundo toque caería sobre la que haya ocupado su sitio.
         if (!TapGuard.accept("delete:$expenseId")) return
 
         Haptics.tick(context)

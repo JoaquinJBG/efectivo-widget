@@ -18,13 +18,13 @@ class Converters {
     fun stringToSource(value: String): ExpenseSource = ExpenseSource.valueOf(value)
 }
 
-/** Adds QuickButton.compact, which splits coin buttons out of the category grid. */
+/** Añade QuickButton.compact, que saca las monedas de la rejilla de categorías. */
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL(
             "ALTER TABLE quick_buttons ADD COLUMN compact INTEGER NOT NULL DEFAULT 0"
         )
-        // The seeded coin buttons are the ones whose label is just the amount.
+        // Los botones de moneda sembrados son los que llevan ese emoji.
         connection.execSQL(
             "UPDATE quick_buttons SET compact = 1 WHERE emoji = '🪙'"
         )

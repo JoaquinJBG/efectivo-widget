@@ -467,18 +467,15 @@ private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
                     .fillMaxWidth()
                     .height(WidgetStyle.COIN_HEIGHT.dp),
             ) {
-                // Aqui el hueco va como padding y no como Spacer: con 6 monedas, un
-                // separador entre cada dos daria 11 hijos y Glance descarta a partir
-                // del decimo. CoinButton no tiene relleno propio, asi que el padding
-                // no queda pisado y se ve.
-                row.forEachIndexed { index, coin ->
+                // Medio hueco a cada lado de cada moneda: entre dos suman COIN_GAP y
+                // todas quedan del mismo ancho. Con un Spacer entre cada par serian 11
+                // hijos y Glance descarta a partir del decimo (se perdia el de 50).
+                row.forEach { coin ->
                     CoinButton(
                         coin = coin,
                         modifier = GlanceModifier
                             .defaultWeight()
-                            .padding(
-                                end = if (index < row.size - 1) WidgetStyle.COIN_GAP.dp else 0.dp,
-                            ),
+                            .padding(horizontal = (WidgetStyle.COIN_GAP / 2f).dp),
                     )
                 }
                 repeat(layout.coinColumns - row.size) {
@@ -513,7 +510,9 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = coin.fixedAmountCents?.let { Money.formatShort(it) } ?: coin.label,
+            text = coin.fixedAmountCents
+                ?.let { Money.formatShort(it, spaced = WidgetStyle.COIN_SPACE_BEFORE_EURO) }
+                ?: coin.label,
             maxLines = 1,
             style = TextStyle(
                 color = WidgetStyle.onDark,

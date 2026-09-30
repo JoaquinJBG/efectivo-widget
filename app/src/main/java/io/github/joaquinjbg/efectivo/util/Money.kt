@@ -5,7 +5,12 @@ import kotlin.math.absoluteValue
 /** Spanish money formatting: 1234567 cents -> "12.345,67 €". */
 object Money {
 
-    fun format(cents: Long): String = formatNumber(cents) + " €"
+    /**
+     * [spaced] = false pega el símbolo al número ("2€" en vez de "2 €"). Lo usan los
+     * botones de moneda del widget, donde el espacio se come sitio y no aporta.
+     */
+    fun format(cents: Long, spaced: Boolean = true): String =
+        formatNumber(cents) + (if (spaced) " " else "") + "€"
 
     fun formatNumber(cents: Long): String {
         val sign = if (cents < 0) "-" else ""
@@ -16,13 +21,14 @@ object Money {
     }
 
     /** Short form used on widget buttons: "2 €" when whole, "2,50 €" otherwise. */
-    fun formatShort(cents: Long): String {
+    fun formatShort(cents: Long, spaced: Boolean = true): String {
         val abs = cents.absoluteValue
+        val gap = if (spaced) " " else ""
         return if (abs % 100 == 0L) {
             val sign = if (cents < 0) "-" else ""
-            "$sign${groupThousands(abs / 100)} €"
+            "$sign${groupThousands(abs / 100)}$gap€"
         } else {
-            format(cents)
+            format(cents, spaced)
         }
     }
 

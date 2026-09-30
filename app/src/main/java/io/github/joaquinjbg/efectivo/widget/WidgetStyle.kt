@@ -45,7 +45,7 @@ object WidgetStyle {
     // ─── ESPACIADO GENERAL ──────────────────────────────────────────────
 
     /** Margen entre el borde del widget y su contenido. */
-    const val OUTER_PADDING = 10f
+    const val OUTER_PADDING = 8f
 
     /**
      * Separación por defecto. La usan los huecos que no tienen constante propia.
@@ -72,10 +72,10 @@ object WidgetStyle {
     // puedes tocar una sin mover el resto.
 
     /** Entre las baldosas de categoría, y entre sus filas. */
-    const val CATEGORY_GAP = 10f
+    const val CATEGORY_GAP = 8f
 
     /** Entre los botones de moneda. */
-    const val COIN_GAP = 8f
+    const val COIN_GAP = 6f
 
     /** Entre "Otro…" y "Deshacer". */
     const val ACTION_GAP = 10f
@@ -144,6 +144,9 @@ object WidgetStyle {
     const val COIN_MIN_WIDTH = 40f
     const val COIN_TEXT_SP = 15f
     const val COIN_CORNER = 12f
+
+    /** false = "1€" pegado; true = "1 €" con espacio. Solo afecta a estos botones. */
+    const val COIN_SPACE_BEFORE_EURO = false
 
     // ─── FILA DE ACCIONES (Otro… / Deshacer) ────────────────────────────
 

@@ -61,6 +61,7 @@ object Seed {
                     categoryId = varios,
                     fixedAmountCents = cents,
                     sortOrder = 4 + index,
+                    compact = true,
                 )
             }
             quickButtonDao.insertAll(buttons)

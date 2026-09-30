@@ -52,6 +52,11 @@ data class QuickButton(
     val fixedAmountCents: Long?,
     val sortOrder: Int,
     val enabled: Boolean = true,
+    /**
+     * Coin and note buttons: drawn small, in their own row under the category grid.
+     * Category buttons get the big square tiles.
+     */
+    val compact: Boolean = false,
 )
 
 /** An expense joined with the name/emoji of its category. */

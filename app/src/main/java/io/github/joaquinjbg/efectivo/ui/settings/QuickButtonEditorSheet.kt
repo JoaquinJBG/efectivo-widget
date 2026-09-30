@@ -51,6 +51,7 @@ fun QuickButtonEditorSheet(
         mutableStateOf(button?.categoryId ?: categories.firstOrNull()?.id)
     }
     var askAmount by remember { mutableStateOf(button?.fixedAmountCents == null) }
+    var compact by remember { mutableStateOf(button?.compact ?: false) }
     val input = rememberAmountInput(
         initial = button?.fixedAmountCents?.let { Money.formatNumber(it) }.orEmpty()
     )
@@ -116,6 +117,22 @@ fun QuickButtonEditorSheet(
                 Switch(checked = askAmount, onCheckedChange = { askAmount = it })
             }
 
+            Row(
+                Modifier.fillMaxWidth().height(56.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Botón pequeño", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Fila compacta, solo el importe (monedas y billetes)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = compact, onCheckedChange = { compact = it })
+            }
+
             if (!askAmount) {
                 AmountDisplay(input)
                 Keypad(input)
@@ -135,6 +152,7 @@ fun QuickButtonEditorSheet(
                             fixedAmountCents = if (askAmount) null else cents,
                             sortOrder = button?.sortOrder ?: 0,
                             enabled = button?.enabled ?: true,
+                            compact = compact,
                         )
                     )
                 },

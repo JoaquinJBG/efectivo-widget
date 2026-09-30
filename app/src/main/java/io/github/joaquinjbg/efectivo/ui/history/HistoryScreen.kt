@@ -13,8 +13,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
@@ -73,6 +78,7 @@ fun HistoryScreen(modifier: Modifier = Modifier) {
                             onTap = { editing = expense },
                             onLongPress = { confirmingDelete = expense },
                             onSwiped = { viewModel.delete(expense.id) },
+                            onDelete = { viewModel.delete(expense.id) },
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     }
@@ -151,6 +157,7 @@ private fun SwipeableExpenseRow(
     onTap: () -> Unit,
     onLongPress: () -> Unit,
     onSwiped: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
 
@@ -197,6 +204,14 @@ private fun SwipeableExpenseRow(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
+            // Visible, como en el widget: deslizar funcionaba, pero nada lo indicaba.
+            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Eliminar gasto",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }

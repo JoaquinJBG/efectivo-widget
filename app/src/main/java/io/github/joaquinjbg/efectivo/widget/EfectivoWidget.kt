@@ -67,22 +67,22 @@ private const val MIN_COLUMNS = 2
 private const val MAX_COLUMNS = 6
 
 /** Wide enough that "Desayuno" and "50 €" are not cut off. */
-private const val BUTTON_MIN_WIDTH_DP = 80f
+private const val BUTTON_MIN_WIDTH_DP = 84f
 private const val BUTTON_GAP_DP = 10f
 private const val WIDGET_PADDING_DP = 20f
 private const val HEADER_COMPACT_DP = 22f
 private const val HEADER_FULL_DP = 46f
 private const val TOTALS_ROW_DP = 40f
 private const val ACTION_ROW_DP = 46f
-private const val TODAY_LIST_MIN_DP = 120f
+private const val TODAY_LIST_MIN_DP = 60f
 private const val VERTICAL_SLACK_DP = 28f
 
 /** A button row never shrinks below this, and never grows past it. */
 private const val BUTTON_ROW_MIN_DP = 52f
-private const val BUTTON_ROW_MAX_DP = 132f
+private const val BUTTON_ROW_MAX_DP = 76f
 
 /** Height a row wants before the leftover space is offered to the day list. */
-private const val BUTTON_ROW_COMFORTABLE_DP = 88f
+private const val BUTTON_ROW_COMFORTABLE_DP = 76f
 
 private fun levelFor(heightDp: Float): WidgetLevel = when {
     heightDp >= 420f -> WidgetLevel.FULL
@@ -95,6 +95,7 @@ private data class GridLayout(
     val columns: Int,
     val rows: Int,
     val rowHeightDp: Float,
+    val gridHeightDp: Float,
     val showTodayList: Boolean,
 ) {
     /** Type scales with the buttons, so a tall widget reads from further away. */
@@ -134,15 +135,13 @@ private fun layoutFor(
     val fittingRows = maxOf(1, (forGrid / BUTTON_ROW_MIN_DP).toInt())
     val rows = minOf(wantedRows, fittingRows)
 
-    // The day list only earns space once every button row already has a comfortable height.
-    val comfortable = rows * BUTTON_ROW_COMFORTABLE_DP
-    val showTodayList = level == WidgetLevel.FULL &&
-        forGrid - comfortable >= TODAY_LIST_MIN_DP
+    // Rows are capped: a tall widget should not blow the buttons up into mostly padding.
+    val rowHeight = (forGrid / rows).coerceIn(BUTTON_ROW_MIN_DP, BUTTON_ROW_MAX_DP)
+    val gridHeight = rows * rowHeight
+    val showTodayList = level != WidgetLevel.COMPACT &&
+        forGrid - gridHeight >= TODAY_LIST_MIN_DP
 
-    val gridHeight = if (showTodayList) comfortable else forGrid
-    val rowHeight = (gridHeight / rows).coerceIn(BUTTON_ROW_MIN_DP, BUTTON_ROW_MAX_DP)
-
-    return GridLayout(columns, rows, rowHeight, showTodayList)
+    return GridLayout(columns, rows, rowHeight, gridHeight, showTodayList)
 }
 
 object EfectivoWidget : GlanceAppWidget() {
@@ -235,7 +234,7 @@ private fun WidgetContent(
         QuickButtonGrid(
             buttons = data.buttons.take(grid.rows * grid.columns),
             grid = grid,
-            modifier = GlanceModifier.defaultWeight(),
+            modifier = GlanceModifier.height(grid.gridHeightDp.dp),
         )
 
         // Directly under the grid so a growing day list cannot push it out of view.

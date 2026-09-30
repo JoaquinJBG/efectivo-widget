@@ -123,7 +123,7 @@ private fun layoutFor(
     val coinBand = if (coinRows == 0) 0f else coinRows * (WidgetStyle.COIN_HEIGHT + WidgetStyle.GAP)
 
     val chrome = (if (compact) WidgetStyle.HEADER_COMPACT_HEIGHT else WidgetStyle.HEADER_HEIGHT + WidgetStyle.TOTALS_HEIGHT) +
-        WidgetStyle.ACTION_HEIGHT + WidgetStyle.GAP + coinBand
+        WidgetStyle.GAP + coinBand
     val forCategories = (heightDp - chrome).coerceAtLeast(0f)
 
     val wantedRows = if (categoryCount == 0) 0 else (categoryCount + categoryColumns - 1) / categoryColumns
@@ -228,8 +228,6 @@ private fun WidgetContent(
         )
 
         CoinRow(data.coins, layout)
-
-        ActionRow()
 
         if (!layout.compact) {
             // Separador real: un padding(top) dentro de TodayList lo anulaba su propio
@@ -545,50 +543,6 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
     }
 }
 
-@Composable
-private fun ActionRow() {
-    val context = LocalContext.current
-    Row(modifier = GlanceModifier.fillMaxWidth().height(WidgetStyle.ACTION_HEIGHT.dp)) {
-        ActionCell(
-            label = "Otro…",
-            modifier = GlanceModifier.defaultWeight(),
-            action = GlanceModifier.clickable(
-                actionStartActivity(QuickEntryActivity.intent(context, categoryId = null))
-            ),
-        )
-        Spacer(GlanceModifier.width(WidgetStyle.ACTION_GAP.dp))
-        ActionCell(
-            label = "Deshacer",
-            modifier = GlanceModifier.defaultWeight(),
-            action = GlanceModifier.clickable(actionRunCallback<UndoAction>()),
-        )
-    }
-}
-
-@Composable
-private fun ActionCell(label: String, modifier: GlanceModifier, action: GlanceModifier) {
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .background(WidgetStyle.card)
-            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
-            .then(action),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            maxLines = 1,
-            style = TextStyle(
-                color = WidgetStyle.onDark,
-                fontSize = WidgetStyle.ACTION_TEXT_SP.sp,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-            ),
-        )
-    }
-}
-
 /** Today's expenses, newest first: concept on the left, amount on the right. */
 @Composable
 private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModifier) {
@@ -611,28 +565,64 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
         }
         LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
             items(expenses.take(WidgetStyle.HISTORY_MAX_ROWS), itemId = { it.id }) { expense ->
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth().padding(vertical = WidgetStyle.HISTORY_ROW_PADDING.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = expense.categoryEmoji + " " +
-                            (expense.note?.takeIf { it.isNotBlank() } ?: expense.categoryName),
-                        maxLines = 1,
-                        modifier = GlanceModifier.defaultWeight(),
-                        style = TextStyle(color = WidgetStyle.onDark, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
-                    )
-                    Text(
-                        text = Money.format(expense.amountCents),
-                        maxLines = 1,
-                        style = TextStyle(
-                            color = WidgetStyle.onDark,
-                            fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                    )
-                }
+                HistoryRow(expense)
             }
         }
+    }
+}
+
+/** One expense: concept, amount, and a ✕ that deletes just that one. */
+@Composable
+private fun HistoryRow(expense: ExpenseWithCategory) {
+    val concept = expense.note?.takeIf { it.isNotBlank() } ?: expense.categoryName
+    val amount = Money.format(expense.amountCents)
+
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = WidgetStyle.HISTORY_ROW_PADDING.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = expense.categoryEmoji + " " + concept,
+            maxLines = 1,
+            modifier = GlanceModifier.defaultWeight(),
+            style = TextStyle(
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
+            ),
+        )
+        Text(
+            text = amount,
+            maxLines = 1,
+            style = TextStyle(
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+        )
+        Text(
+            text = "✕",
+            maxLines = 1,
+            // The padding is the touch target: the glyph itself is far too small to hit.
+            modifier = GlanceModifier
+                .padding(
+                    horizontal = WidgetStyle.HISTORY_DELETE_PADDING_H.dp,
+                    vertical = WidgetStyle.HISTORY_DELETE_PADDING_V.dp,
+                )
+                .clickable(
+                    actionRunCallback<DeleteExpenseAction>(
+                        actionParametersOf(
+                            WidgetParams.expenseId to expense.id,
+                            WidgetParams.expenseLabel to "$concept $amount",
+                        )
+                    )
+                ),
+            style = TextStyle(
+                color = WidgetStyle.danger,
+                fontSize = WidgetStyle.HISTORY_DELETE_SP.sp,
+                textAlign = TextAlign.Center,
+            ),
+        )
     }
 }

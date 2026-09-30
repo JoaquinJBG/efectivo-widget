@@ -185,23 +185,6 @@ class ExpenseRepository(
         return id
     }
 
-    /**
-     * Deletes the most recent expense and returns it, or null when there is nothing to undo.
-     *
-     * [beforeDelete] runs with the row that is about to go, before [onChanged] fires. The
-     * widget uses it to stage its header message so the single refresh that follows paints
-     * the new balance and the message together.
-     */
-    suspend fun undoLastExpense(
-        beforeDelete: suspend (ExpenseWithCategory) -> Unit = {},
-    ): ExpenseWithCategory? {
-        val latest = expenseDao.latestWithCategory() ?: return null
-        beforeDelete(latest)
-        expenseDao.deleteById(latest.id)
-        onChanged()
-        return latest
-    }
-
     // ---- quick buttons ----
 
     suspend fun addQuickButton(button: QuickButton): Long {

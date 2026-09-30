@@ -19,6 +19,8 @@ val WidgetMessageKey = stringPreferencesKey("widget_message")
 
 object WidgetParams {
     val buttonId = ActionParameters.Key<Long>("buttonId")
+    val expenseId = ActionParameters.Key<Long>("expenseId")
+    val expenseLabel = ActionParameters.Key<String>("expenseLabel")
 }
 
 private const val MESSAGE_VISIBLE_MILLIS = 2_500L
@@ -91,27 +93,27 @@ class QuickAddAction : ActionCallback {
     }
 }
 
-/** Deletes the most recent expense and reports what was removed. */
-class UndoAction : ActionCallback {
+/**
+ * Deletes one expense straight from its row in the day list.
+ *
+ * Replaces the old "Deshacer" button, which could only undo the newest one.
+ */
+class DeleteExpenseAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        // Undo is deliberately not rate-limited: tapping it twice removes two expenses.
+        val expenseId = parameters[WidgetParams.expenseId] ?: return
+        // Guarded like the quick buttons: the row moves as soon as the list redraws,
+        // and a second tap would land on whatever took its place.
+        if (!TapGuard.accept("delete:$expenseId")) return
+
         Haptics.tick(context)
 
-        val undone = Graph.repository(context).undoLastExpense { latest ->
-            setMessage(
-                context,
-                glanceId,
-                "Deshecho: " + describe(latest.categoryName, latest.amountCents),
-            )
-        }
-        if (undone == null) {
-            setMessage(context, glanceId, "Nada que deshacer")
-            EfectivoWidget.update(context, glanceId)
-        }
+        val label = parameters[WidgetParams.expenseLabel].orEmpty()
+        setMessage(context, glanceId, if (label.isBlank()) "Borrado" else "Borrado: $label")
+        Graph.repository(context).deleteExpense(expenseId)
         clearMessageLater(context, glanceId)
     }
 }

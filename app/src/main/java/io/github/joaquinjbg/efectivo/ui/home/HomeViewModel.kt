@@ -18,6 +18,11 @@ data class HomeUiState(
     val todayTotalCents: Long = 0,
     val todayExpenses: List<ExpenseWithCategory> = emptyList(),
     val categories: List<Category> = emptyList(),
+    /**
+     * Importe fijo de cada categoría que tenga botón con uno. Al elegirla en la hoja
+     * de gasto no hace falta teclear nada: se apunta ese importe y se cierra.
+     */
+    val fixedAmounts: Map<Long, Long> = emptyMap(),
 )
 
 class HomeViewModel(private val repository: ExpenseRepository) : ViewModel() {
@@ -29,8 +34,20 @@ class HomeViewModel(private val repository: ExpenseRepository) : ViewModel() {
         repository.observeTotalOn(today),
         repository.observeExpensesOn(today),
         repository.observeCategories(),
-    ) { balance, todayTotal, todayExpenses, categories ->
-        HomeUiState(balance, todayTotal, todayExpenses, categories)
+        repository.observeEnabledQuickButtons(),
+    ) { balance, todayTotal, todayExpenses, categories, buttons ->
+        HomeUiState(
+            balanceCents = balance,
+            todayTotalCents = todayTotal,
+            todayExpenses = todayExpenses,
+            categories = categories,
+            // Las monedas comparten categoría, así que no cuentan: si no, "Varios"
+            // quedaría atado al importe de la última moneda de la lista.
+            fixedAmounts = buttons
+                .filterNot { it.compact }
+                .mapNotNull { b -> b.fixedAmountCents?.let { b.categoryId to it } }
+                .toMap(),
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     fun addExpense(amountCents: Long, categoryId: Long, note: String?) {

@@ -108,6 +108,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         Sheet.EXPENSE -> EntrySheet(
             title = "Nuevo gasto",
             categories = state.categories,
+            fixedAmounts = state.fixedAmounts,
             onDismiss = { sheet = Sheet.NONE },
             onConfirm = { cents, categoryId, note ->
                 viewModel.addExpense(cents, categoryId!!, note)

@@ -38,6 +38,11 @@ fun EntrySheet(
     confirmLabel: String = "Guardar",
     initialCategoryId: Long? = null,
     allowNegative: Boolean = false,
+    /**
+     * Categorías con importe ya definido. Al elegir una de esas sin haber tecleado nada,
+     * el gasto se apunta y la hoja se cierra: no hay nada más que decidir.
+     */
+    fixedAmounts: Map<Long, Long> = emptyMap(),
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val input = rememberAmountInput()
@@ -89,7 +94,14 @@ fun EntrySheet(
                 CategoryChips(
                     categories = categories,
                     selectedId = selectedCategory,
-                    onSelect = { selectedCategory = it },
+                    onSelect = { categoryId ->
+                        selectedCategory = categoryId
+                        val fixed = fixedAmounts[categoryId]
+                        // Si ya has tecleado un importe, manda el tuyo.
+                        if (fixed != null && input.isEmpty) {
+                            onConfirm(fixed, categoryId, note)
+                        }
+                    },
                 )
                 Spacer(Modifier.height(12.dp))
             }

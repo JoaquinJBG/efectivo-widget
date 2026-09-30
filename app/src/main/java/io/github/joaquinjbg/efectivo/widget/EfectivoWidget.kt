@@ -37,6 +37,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import io.github.joaquinjbg.efectivo.Graph
+import io.github.joaquinjbg.efectivo.R
 import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
 import io.github.joaquinjbg.efectivo.data.QuickButton
 import io.github.joaquinjbg.efectivo.data.WidgetTotals
@@ -236,7 +237,8 @@ private fun Header(data: WidgetData, compact: Boolean) {
     val openApp = GlanceModifier.clickable(
         actionStartActivity(
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        )
+        ),
+        rippleOverride = R.drawable.widget_sin_onda,
     )
 
     if (compact) {
@@ -394,11 +396,13 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
         GlanceModifier.clickable(
             actionRunCallback<QuickAddAction>(
                 actionParametersOf(WidgetParams.buttonId to button.id)
-            )
+            ),
+            rippleOverride = R.drawable.widget_sin_onda,
         )
     } else {
         GlanceModifier.clickable(
-            actionStartActivity(QuickEntryActivity.intent(context, button.categoryId))
+            actionStartActivity(QuickEntryActivity.intent(context, button.categoryId)),
+            rippleOverride = R.drawable.widget_sin_onda,
         )
     }
     Column(
@@ -486,11 +490,13 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
         GlanceModifier.clickable(
             actionRunCallback<QuickAddAction>(
                 actionParametersOf(WidgetParams.buttonId to coin.id)
-            )
+            ),
+            rippleOverride = R.drawable.widget_sin_onda,
         )
     } else {
         GlanceModifier.clickable(
-            actionStartActivity(QuickEntryActivity.intent(context, coin.categoryId))
+            actionStartActivity(QuickEntryActivity.intent(context, coin.categoryId)),
+            rippleOverride = R.drawable.widget_sin_onda,
         )
     }
     Column(
@@ -598,7 +604,8 @@ private fun HistoryRow(expense: ExpenseWithCategory) {
                 .clickable(
                     actionRunCallback<DeleteExpenseAction>(
                         actionParametersOf(WidgetParams.expenseId to expense.id)
-                    )
+                    ),
+                    rippleOverride = R.drawable.widget_sin_onda,
                 ),
             style = TextStyle(
                 color = WidgetStyle.danger,

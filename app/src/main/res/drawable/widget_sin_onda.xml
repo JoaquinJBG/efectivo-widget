@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fondo transparente que sustituye a la onda que Glance dibuja al pulsar. Esa onda
+  se expande desde el punto del dedo y da la sensacion de que el boton se desplaza
+  hacia donde tocas.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>

@@ -32,6 +32,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
@@ -285,12 +286,18 @@ private fun Header(data: WidgetData, message: String?, compact: Boolean) {
         return
     }
 
-    Row(modifier = GlanceModifier.fillMaxWidth().padding(bottom = WidgetStyle.GAP.dp).then(openApp)) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(bottom = WidgetStyle.HEADER_BOTTOM_GAP.dp)
+            .then(openApp),
+    ) {
         HeaderCard(
             label = "Efectivo",
             value = Money.format(data.totals.balanceCents),
-            modifier = GlanceModifier.defaultWeight().padding(end = WidgetStyle.GAP.dp),
+            modifier = GlanceModifier.defaultWeight(),
         )
+        Spacer(GlanceModifier.width(WidgetStyle.HEADER_GAP.dp))
         HeaderCard(
             label = "Hoy",
             value = Money.format(data.totals.todayCents),
@@ -325,26 +332,38 @@ private fun HeaderCard(label: String, value: String, modifier: GlanceModifier) {
 
 @Composable
 private fun TotalsRow(data: WidgetData) {
+    // Dos tarjetas separadas, no una sola partida en dos: antes compartian fondo y
+    // por eso no habia forma de meter separacion entre "Semana" y "Mes".
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .padding(bottom = WidgetStyle.GAP.dp)
+            .padding(bottom = WidgetStyle.TOTALS_BOTTOM_GAP.dp),
+    ) {
+        TotalCell(
+            label = "Semana",
+            cents = data.totals.weekCents,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+        Spacer(GlanceModifier.width(WidgetStyle.TOTALS_GAP.dp))
+        TotalCell(
+            label = "Mes",
+            cents = data.totals.monthCents,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+    }
+}
+
+@Composable
+private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
+    Column(
+        modifier = modifier
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(
                 horizontal = WidgetStyle.CARD_PADDING_H.dp,
                 vertical = WidgetStyle.CARD_PADDING_V.dp,
             ),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        TotalCell("Semana", data.totals.weekCents, GlanceModifier.defaultWeight())
-        TotalCell("Mes", data.totals.monthCents, GlanceModifier.defaultWeight())
-    }
-}
-
-@Composable
-private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
-    Column(modifier = modifier) {
         Text(
             text = label,
             maxLines = 1,
@@ -366,23 +385,20 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
 @Composable
 private fun CategoryGrid(buttons: List<QuickButton>, layout: WidgetLayout) {
     if (buttons.isEmpty()) return
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
-        buttons.chunked(layout.categoryColumns).forEach { row ->
+    Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = WidgetStyle.CATEGORY_GAP.dp)) {
+        buttons.chunked(layout.categoryColumns).forEachIndexed { rowIndex, row ->
+            if (rowIndex > 0) Spacer(GlanceModifier.height(WidgetStyle.CATEGORY_GAP.dp))
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .height((layout.categorySideDp + WidgetStyle.GAP).dp),
+                    .height(layout.categorySideDp.dp),
             ) {
                 row.forEachIndexed { index, button ->
+                    if (index > 0) Spacer(GlanceModifier.width(WidgetStyle.CATEGORY_GAP.dp))
                     CategoryTile(
                         button = button,
                         layout = layout,
-                        modifier = GlanceModifier
-                            .defaultWeight()
-                            .padding(
-                                end = if (index < layout.categoryColumns - 1) WidgetStyle.GAP.dp else 0.dp,
-                                bottom = WidgetStyle.GAP.dp,
-                            ),
+                        modifier = GlanceModifier.defaultWeight(),
                     )
                 }
                 repeat(layout.categoryColumns - row.size) {
@@ -443,21 +459,25 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
 @Composable
 private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
     if (coins.isEmpty()) return
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
-        coins.chunked(layout.coinColumns).forEach { row ->
+    Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = WidgetStyle.COIN_GAP.dp)) {
+        coins.chunked(layout.coinColumns).forEachIndexed { rowIndex, row ->
+            if (rowIndex > 0) Spacer(GlanceModifier.height(WidgetStyle.COIN_GAP.dp))
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .height((WidgetStyle.COIN_HEIGHT + WidgetStyle.GAP).dp),
+                    .height(WidgetStyle.COIN_HEIGHT.dp),
             ) {
+                // Aqui el hueco va como padding y no como Spacer: con 6 monedas, un
+                // separador entre cada dos daria 11 hijos y Glance descarta a partir
+                // del decimo. CoinButton no tiene relleno propio, asi que el padding
+                // no queda pisado y se ve.
                 row.forEachIndexed { index, coin ->
                     CoinButton(
                         coin = coin,
                         modifier = GlanceModifier
                             .defaultWeight()
                             .padding(
-                                end = if (index < layout.coinColumns - 1) WidgetStyle.GAP.dp else 0.dp,
-                                bottom = WidgetStyle.GAP.dp,
+                                end = if (index < row.size - 1) WidgetStyle.COIN_GAP.dp else 0.dp,
                             ),
                     )
                 }
@@ -511,11 +531,12 @@ private fun ActionRow() {
     Row(modifier = GlanceModifier.fillMaxWidth().height(WidgetStyle.ACTION_HEIGHT.dp)) {
         ActionCell(
             label = "Otro…",
-            modifier = GlanceModifier.defaultWeight().padding(end = WidgetStyle.GAP.dp),
+            modifier = GlanceModifier.defaultWeight(),
             action = GlanceModifier.clickable(
                 actionStartActivity(QuickEntryActivity.intent(context, categoryId = null))
             ),
         )
+        Spacer(GlanceModifier.width(WidgetStyle.ACTION_GAP.dp))
         ActionCell(
             label = "Deshacer",
             modifier = GlanceModifier.defaultWeight(),
@@ -554,7 +575,7 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = WidgetStyle.GAP.dp)
+            .padding(top = WidgetStyle.HISTORY_TOP_GAP.dp)
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(

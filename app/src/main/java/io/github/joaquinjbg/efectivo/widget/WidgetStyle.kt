@@ -45,17 +45,43 @@ object WidgetStyle {
     // ─── ESPACIADO GENERAL ──────────────────────────────────────────────
 
     /** Margen entre el borde del widget y su contenido. */
-    const val OUTER_PADDING = 100f
+    const val OUTER_PADDING = 10f
 
-    /** Separación entre botones, y entre bandas (cabecera, totales, etc.). */
-    const val GAP = 12f
+    /**
+     * Separación por defecto. La usan los huecos que no tienen constante propia.
+     *
+     * OJO: en Glance los huecos NO se hacen con margin (no existe) ni encadenando
+     * padding (el de dentro pisa al de fuera y no se suman). Se hacen metiendo un
+     * separador entre los elementos, y eso es lo que controlan las constantes *_GAP
+     * de más abajo. El `padding` de aquí solo sirve como RELLENO interno.
+     */
+    const val GAP = 6f
 
     /** Redondeo de la esquina del widget entero. */
     const val WIDGET_CORNER = 20f
 
-    /** Hueco entre el borde de una tarjeta y su texto (cabecera, totales, historial). */
-    const val CARD_PADDING_H = 12f
-    const val CARD_PADDING_V = 8f
+    /**
+     * RELLENO: hueco entre el borde de una tarjeta y su texto. Subirlo agranda la
+     * tarjeta; el fondo de color sí se pinta en esa zona.
+     */
+    const val CARD_PADDING_H = 6f
+    const val CARD_PADDING_V = 6f
+
+    // ─── SEPARACIONES ───────────────────────────────────────────────────
+    // El hueco ENTRE dos cosas se controla aquí. Cada zona tiene la suya, así que
+    // puedes tocar una sin mover el resto.
+
+    /** Entre las baldosas de categoría, y entre sus filas. */
+    const val CATEGORY_GAP = 10f
+
+    /** Entre los botones de moneda. */
+    const val COIN_GAP = 8f
+
+    /** Entre "Otro…" y "Deshacer". */
+    const val ACTION_GAP = 10f
+
+    /** Entre la fila de acciones y el historial del día. */
+    const val HISTORY_TOP_GAP = 10f
 
     // ─── CABECERA (Efectivo / Hoy) ──────────────────────────────────────
 
@@ -63,6 +89,12 @@ object WidgetStyle {
     const val HEADER_LABEL_SP = 11f
     const val HEADER_AMOUNT_SP = 20f
     const val HEADER_CORNER = 14f
+
+    /** Separación entre la tarjeta de "Efectivo" y la de "Hoy". */
+    const val HEADER_GAP = 12f
+
+    /** Separación entre la cabecera y la fila de Semana/Mes que va debajo. */
+    const val HEADER_BOTTOM_GAP = 12f
 
     /** Versión de una sola línea, cuando el widget es muy bajo. */
     const val HEADER_COMPACT_HEIGHT = 26f
@@ -75,6 +107,12 @@ object WidgetStyle {
     const val TOTALS_HEIGHT = 46f
     const val TOTALS_LABEL_SP = 11f
     const val TOTALS_AMOUNT_SP = 16f
+
+    /** Separación entre la tarjeta de "Semana" y la de "Mes". */
+    const val TOTALS_GAP = 12f
+
+    /** Separación entre la fila de totales y los botones que van debajo. */
+    const val TOTALS_BOTTOM_GAP = 12f
 
     // ─── BOTONES DE CATEGORÍA (Café, Desayuno…) ─────────────────────────
 

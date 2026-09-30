@@ -91,6 +91,11 @@ resuelve el widget en cada composición.
   en dp de lo que ocupa cada bloque. Los números están en `EfectivoWidget.kt`.
 - **Vibrar desde un callback de widget** requiere `VibrationAttributes.USAGE_TOUCH`: el
   proceso está en segundo plano y Android descarta las vibraciones sin un *usage* válido.
+- **Los huecos entre elementos se hacen con `Spacer`, no con `padding`.** No existe
+  `.margin()`, y dos `padding` encadenados **no se suman**: el de dentro pisa al de fuera.
+  Un `padding(end = 40.dp)` sobre un hijo que ya tiene relleno propio no hace nada.
+  La excepción son los botones de moneda: al ser seis, un `Spacer` entre cada dos
+  pasaría del límite de 10 hijos, y como no tienen relleno propio el `padding` sí vale.
 
 ## Fuera de alcance
 

@@ -26,8 +26,10 @@ import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -158,6 +160,7 @@ private val WIDGET_SIZES = setOf(
     // The reference screen is the outer one: 353 dp wide, so these must stay under it.
     DpSize(330.dp, 220.dp),
     DpSize(330.dp, 420.dp),
+    DpSize(330.dp, 530.dp),
     DpSize(330.dp, 640.dp), // outer screen, full height
     DpSize(520.dp, 340.dp), // inner screen, landscape
     DpSize(520.dp, 640.dp), // inner screen, full height
@@ -374,9 +377,12 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
 }
 
 @Composable
-private fun QuickButtonGrid(buttons: List<QuickButton>, grid: GridLayout) {
+private fun ColumnScope.QuickButtonGrid(buttons: List<QuickButton>, grid: GridLayout) {
     buttons.chunked(grid.columns).forEach { row ->
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
+        // defaultWeight, not a fixed height: the declared size is only an estimate, so the
+        // rows share out whatever the launcher actually handed us. With fixed heights a
+        // taller slot left dead space and a shorter one dropped the last rows entirely.
+        Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
             row.forEach { button ->
                 QuickButtonCell(
                     button = button,
@@ -475,7 +481,7 @@ private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: Gla
     }
     Column(
         modifier = modifier
-            .height(grid.rowHeightDp.dp)
+            .fillMaxHeight()
             .background(WidgetColors.key)
             .cornerRadius(14.dp)
             .padding(horizontal = 4.dp)

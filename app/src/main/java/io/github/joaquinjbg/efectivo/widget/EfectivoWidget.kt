@@ -5,7 +5,6 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -146,29 +145,15 @@ private fun layoutFor(
     return GridLayout(columns, rows, rowHeight, showTodayList)
 }
 
-/**
- * Declared sizes the launcher picks from.
- *
- * SizeMode.Exact built one layout per orientation, and on a foldable — two screens with
- * very different proportions — the launcher kept showing the wide layout inside the narrow
- * slot, clipping the content on both edges. Responsive lets it choose a layout that fits.
- */
-private val WIDGET_SIZES = setOf(
-    DpSize(150.dp, 110.dp),
-    DpSize(240.dp, 180.dp),
-    DpSize(280.dp, 340.dp),
-    // The reference screen is the outer one: 353 dp wide, so these must stay under it.
-    DpSize(330.dp, 220.dp),
-    DpSize(330.dp, 420.dp),
-    DpSize(330.dp, 530.dp),
-    DpSize(330.dp, 640.dp), // outer screen, full height
-    DpSize(520.dp, 340.dp), // inner screen, landscape
-    DpSize(520.dp, 640.dp), // inner screen, full height
-)
-
 object EfectivoWidget : GlanceAppWidget() {
 
-    override val sizeMode: SizeMode = SizeMode.Responsive(WIDGET_SIZES)
+    /**
+     * Exact, not Responsive. Responsive makes the launcher pick from a list of declared
+     * sizes, and this one kept choosing a much smaller one than the actual slot — a
+     * 240x180 layout stretched across 333x700, so two giant buttons and no totals row.
+     * Exact lays out for the real size, so any width the user drags to just works.
+     */
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val t0 = Perf.now()

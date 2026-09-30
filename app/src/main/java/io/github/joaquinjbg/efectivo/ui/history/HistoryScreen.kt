@@ -4,7 +4,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,13 +12,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,11 +70,11 @@ fun HistoryScreen(modifier: Modifier = Modifier) {
                 state.days.forEach { day ->
                     item(key = "header-" + day.date) { DayHeader(day) }
                     items(day.expenses, key = { it.id }) { expense ->
-                        SwipeableExpenseRow(
+                        ExpenseRow(
                             expense = expense,
                             onTap = { editing = expense },
                             onLongPress = { confirmingDelete = expense },
-                            onSwiped = { viewModel.delete(expense.id) },
+                            onDelete = { viewModel.delete(expense.id) },
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     }
@@ -146,29 +148,12 @@ private fun DayHeader(day: DaySection) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SwipeableExpenseRow(
+private fun ExpenseRow(
     expense: ExpenseWithCategory,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
-    onSwiped: () -> Unit,
+    onDelete: () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState()
-
-    SwipeToDismissBox(
-        state = dismissState,
-        onDismiss = { onSwiped() },
-        backgroundContent = {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.error)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Text("Eliminar", color = MaterialTheme.colorScheme.onError)
-            }
-        },
-    ) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -197,6 +182,13 @@ private fun SwipeableExpenseRow(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
+            // Visible, como en el widget: deslizar funcionaba, pero nada lo indicaba.
+            IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Eliminar gasto",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
-    }
 }

@@ -76,7 +76,7 @@ class QuickAddAction : ActionCallback {
 
         // Stage the header message before the write, so the refresh the repository
         // triggers paints balance, today's total and the message in one pass.
-        setMessage(context, glanceId, button.label + " " + Money.formatShort(amount))
+        setMessage(context, glanceId, describe(button.label, amount))
         Perf.step("QuickAdd: mensaje en el estado", t0)
 
         repository.addExpense(
@@ -105,7 +105,7 @@ class UndoAction : ActionCallback {
             setMessage(
                 context,
                 glanceId,
-                "Deshecho: " + latest.categoryName + " " + Money.formatShort(latest.amountCents),
+                "Deshecho: " + describe(latest.categoryName, latest.amountCents),
             )
         }
         if (undone == null) {
@@ -114,6 +114,15 @@ class UndoAction : ActionCallback {
         }
         clearMessageLater(context, glanceId)
     }
+}
+
+/**
+ * "Café 2 €", but just "10 €" for the coin buttons, whose label already is the amount —
+ * otherwise the header read "10 € 10 €".
+ */
+private fun describe(label: String, amountCents: Long): String {
+    val amount = Money.formatShort(amountCents)
+    return if (label.trim() == amount) amount else "${label.trim()} $amount"
 }
 
 private suspend fun setMessage(context: Context, glanceId: GlanceId, message: String) {

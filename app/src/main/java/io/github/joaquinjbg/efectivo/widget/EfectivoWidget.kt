@@ -68,8 +68,8 @@ private const val MIN_COLUMNS = 2
 private const val MAX_COLUMNS = 6
 
 /** Wide enough that "Desayuno" and "50 €" are not cut off. */
-private const val BUTTON_MIN_WIDTH_DP = 92f
-private const val BUTTON_GAP_DP = 6f
+private const val BUTTON_MIN_WIDTH_DP = 80f
+private const val BUTTON_GAP_DP = 10f
 private const val WIDGET_PADDING_DP = 20f
 private const val HEADER_COMPACT_DP = 22f
 private const val HEADER_FULL_DP = 46f
@@ -100,17 +100,17 @@ private data class GridLayout(
 ) {
     /** Type scales with the buttons, so a tall widget reads from further away. */
     val labelSp: Float get() = when {
-        rowHeightDp >= 110f -> 18f
-        rowHeightDp >= 90f -> 16f
-        rowHeightDp >= 68f -> 14f
-        else -> 12f
+        rowHeightDp >= 110f -> 16f
+        rowHeightDp >= 90f -> 15f
+        rowHeightDp >= 68f -> 13f
+        else -> 11f
     }
 
     val amountSp: Float get() = when {
-        rowHeightDp >= 110f -> 28f
-        rowHeightDp >= 90f -> 24f
-        rowHeightDp >= 68f -> 20f
-        else -> 16f
+        rowHeightDp >= 110f -> 24f
+        rowHeightDp >= 90f -> 21f
+        rowHeightDp >= 68f -> 18f
+        else -> 15f
     }
 }
 
@@ -156,7 +156,7 @@ private fun layoutFor(
 private val WIDGET_SIZES = setOf(
     DpSize(150.dp, 110.dp),
     DpSize(240.dp, 180.dp),
-    DpSize(240.dp, 380.dp),
+    DpSize(280.dp, 340.dp),
     // The reference screen is the outer one: 353 dp wide, so these must stay under it.
     DpSize(330.dp, 220.dp),
     DpSize(330.dp, 420.dp),
@@ -232,6 +232,8 @@ private fun WidgetContent(
             "lista=${grid.showTodayList}"
     )
 
+    // Glance only ships container layouts for up to 10 children, and silently drops the
+    // rest. Keep this Column to at most 4 direct children and nest the grid inside its own.
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -242,19 +244,19 @@ private fun WidgetContent(
         Header(data, message, compact = compact)
 
         if (!compact) {
-            Spacer(GlanceModifier.height(6.dp))
             TotalsRow(data)
         }
 
-        Spacer(GlanceModifier.height(8.dp))
-        QuickButtonGrid(data.buttons.take(grid.rows * grid.columns), grid)
+        QuickButtonGrid(
+            buttons = data.buttons.take(grid.rows * grid.columns),
+            grid = grid,
+            modifier = GlanceModifier.defaultWeight(),
+        )
 
-        // Kept directly under the grid: when the day list grew it used to push
-        // "Deshacer" off the bottom of a tall widget.
+        // Directly under the grid so a growing day list cannot push it out of view.
         ActionRow()
 
         if (grid.showTodayList) {
-            Spacer(GlanceModifier.height(8.dp))
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
         }
     }
@@ -347,6 +349,7 @@ private fun TotalsRow(data: WidgetData) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
+            .padding(top = 6.dp, bottom = 8.dp)
             .background(WidgetColors.key)
             .cornerRadius(12.dp)
             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -377,25 +380,36 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
 }
 
 @Composable
-private fun ColumnScope.QuickButtonGrid(buttons: List<QuickButton>, grid: GridLayout) {
-    buttons.chunked(grid.columns).forEach { row ->
-        // defaultWeight, not a fixed height: the declared size is only an estimate, so the
-        // rows share out whatever the launcher actually handed us. With fixed heights a
-        // taller slot left dead space and a shorter one dropped the last rows entirely.
-        Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-            row.forEach { button ->
-                QuickButtonCell(
-                    button = button,
-                    grid = grid,
-                    modifier = GlanceModifier.defaultWeight(),
-                )
-                Spacer(GlanceModifier.width(BUTTON_GAP_DP.dp))
-            }
-            repeat(grid.columns - row.size) {
-                Spacer(GlanceModifier.defaultWeight())
+private fun QuickButtonGrid(
+    buttons: List<QuickButton>,
+    grid: GridLayout,
+    modifier: GlanceModifier,
+) {
+    // Own container, so the rows do not count against the root Column's 10-child budget.
+    // Each row uses defaultWeight rather than a fixed height: the declared size is only an
+    // estimate, so the rows share out whatever the launcher actually handed us.
+    Column(modifier = modifier.fillMaxWidth()) {
+        buttons.chunked(grid.columns).forEach { row ->
+            Row(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .defaultWeight()
+                    .padding(bottom = BUTTON_GAP_DP.dp),
+            ) {
+                row.forEachIndexed { index, button ->
+                    QuickButtonCell(
+                        button = button,
+                        grid = grid,
+                        modifier = GlanceModifier
+                            .defaultWeight()
+                            .padding(end = if (index < grid.columns - 1) BUTTON_GAP_DP.dp else 0.dp),
+                    )
+                }
+                repeat(grid.columns - row.size) {
+                    Spacer(GlanceModifier.defaultWeight())
+                }
             }
         }
-        Spacer(GlanceModifier.height(BUTTON_GAP_DP.dp))
     }
 }
 

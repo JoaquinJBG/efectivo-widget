@@ -210,7 +210,7 @@ private fun WidgetContent(
             .fillMaxSize()
             .background(WidgetStyle.background)
             .cornerRadius(WidgetStyle.WIDGET_CORNER.dp)
-            .padding(10.dp),
+            .padding(WidgetStyle.OUTER_PADDING.dp),
     ) {
         Header(data, message, layout.compact)
 
@@ -305,7 +305,10 @@ private fun HeaderCard(label: String, value: String, modifier: GlanceModifier) {
         modifier = modifier
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(
+                horizontal = WidgetStyle.CARD_PADDING_H.dp,
+                vertical = WidgetStyle.CARD_PADDING_V.dp,
+            ),
     ) {
         Text(label, style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HEADER_LABEL_SP.sp))
         Text(
@@ -328,7 +331,10 @@ private fun TotalsRow(data: WidgetData) {
             .padding(bottom = WidgetStyle.GAP.dp)
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(
+                horizontal = WidgetStyle.CARD_PADDING_H.dp,
+                vertical = WidgetStyle.CARD_PADDING_V.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TotalCell("Semana", data.totals.weekCents, GlanceModifier.defaultWeight())
@@ -406,7 +412,7 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
             .fillMaxHeight()
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.CATEGORY_CORNER.dp)
-            .padding(horizontal = 2.dp)
+            .padding(horizontal = WidgetStyle.CATEGORY_PADDING_H.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
@@ -551,7 +557,10 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
             .padding(top = WidgetStyle.GAP.dp)
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .padding(
+                horizontal = WidgetStyle.CARD_PADDING_H.dp,
+                vertical = WidgetStyle.HISTORY_ROW_PADDING.dp,
+            ),
     ) {
         if (expenses.isEmpty()) {
             Text(
@@ -563,7 +572,7 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
         LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
             items(expenses.take(WidgetStyle.HISTORY_MAX_ROWS), itemId = { it.id }) { expense ->
                 Row(
-                    modifier = GlanceModifier.fillMaxWidth().padding(vertical = 5.dp),
+                    modifier = GlanceModifier.fillMaxWidth().padding(vertical = WidgetStyle.HISTORY_ROW_PADDING.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(

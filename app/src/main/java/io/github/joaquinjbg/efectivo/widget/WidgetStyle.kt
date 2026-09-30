@@ -45,13 +45,17 @@ object WidgetStyle {
     // ─── ESPACIADO GENERAL ──────────────────────────────────────────────
 
     /** Margen entre el borde del widget y su contenido. */
-    const val OUTER_PADDING = 1f
+    const val OUTER_PADDING = 100f
 
     /** Separación entre botones, y entre bandas (cabecera, totales, etc.). */
     const val GAP = 12f
 
     /** Redondeo de la esquina del widget entero. */
     const val WIDGET_CORNER = 20f
+
+    /** Hueco entre el borde de una tarjeta y su texto (cabecera, totales, historial). */
+    const val CARD_PADDING_H = 12f
+    const val CARD_PADDING_V = 8f
 
     // ─── CABECERA (Efectivo / Hoy) ──────────────────────────────────────
 
@@ -87,6 +91,9 @@ object WidgetStyle {
     const val CATEGORY_LABEL_SP = 12f
     const val CATEGORY_AMOUNT_SP = 18f
     const val CATEGORY_CORNER = 16f
+
+    /** Hueco a los lados del texto dentro de la baldosa. */
+    const val CATEGORY_PADDING_H = 2f
 
     /** Con botones más pequeños que esto, la letra baja un escalón. */
     const val CATEGORY_SMALL_BELOW = 60f

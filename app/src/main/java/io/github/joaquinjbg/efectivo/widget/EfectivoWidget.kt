@@ -229,6 +229,9 @@ private fun WidgetContent(
         ActionRow()
 
         if (!layout.compact) {
+            // Separador real: un padding(top) dentro de TodayList lo anulaba su propio
+            // relleno interno, que es la trampa de siempre en Glance.
+            Spacer(GlanceModifier.height(WidgetStyle.HISTORY_TOP_GAP.dp))
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
         }
     }
@@ -574,7 +577,6 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = WidgetStyle.HISTORY_TOP_GAP.dp)
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(

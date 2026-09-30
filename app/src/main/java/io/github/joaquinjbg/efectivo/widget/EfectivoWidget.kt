@@ -64,35 +64,6 @@ import java.time.YearMonth
  *  - RemoteViews cannot measure itself, so the sizes below are estimates in dp.
  */
 
-private const val MAX_TODAY_ROWS = 20
-
-private const val GAP_DP = 8f
-private const val WIDGET_PADDING_DP = 20f
-
-private const val HEADER_DP = 56f
-private const val HEADER_COMPACT_DP = 26f
-private const val TOTALS_ROW_DP = 46f
-private const val ACTION_ROW_DP = 48f
-private const val VERTICAL_SLACK_DP = 16f
-private const val TODAY_LIST_MIN_DP = 70f
-
-/** Category tiles are square; the side is clamped so they stay tappable but not huge. */
-private const val CATEGORY_MIN_WIDTH_DP = 64f
-private const val CATEGORY_SIDE_MIN_DP = 56f
-private const val CATEGORY_SIDE_MAX_DP = 92f
-
-/** Coins are just an amount, so they can be much tighter. */
-private const val COIN_MIN_WIDTH_DP = 40f
-private const val COIN_HEIGHT_DP = 42f
-
-private const val MIN_COLUMNS = 2
-private const val MAX_CATEGORY_COLUMNS = 6
-private const val MAX_COIN_COLUMNS = 8
-private const val PREFERRED_CATEGORY_COLUMNS = 4
-
-/** Below this height the widget drops to a single header line and hides the totals. */
-private const val COMPACT_BELOW_DP = 260f
-
 private data class WidgetLayout(
     val compact: Boolean,
     val categoryColumns: Int,
@@ -102,12 +73,27 @@ private data class WidgetLayout(
     val coinRows: Int,
     val showTodayList: Boolean,
 ) {
-    val categoryLabelSp: Float get() = if (categorySideDp >= 76f) 12f else 10f
-    val categoryAmountSp: Float get() = if (categorySideDp >= 76f) 18f else 15f
+    val categoryLabelSp: Float
+        get() = if (categorySideDp >= WidgetStyle.CATEGORY_SMALL_BELOW) {
+            WidgetStyle.CATEGORY_LABEL_SP
+        } else {
+            WidgetStyle.CATEGORY_LABEL_SMALL_SP
+        }
+
+    val categoryAmountSp: Float
+        get() = if (categorySideDp >= WidgetStyle.CATEGORY_SMALL_BELOW) {
+            WidgetStyle.CATEGORY_AMOUNT_SP
+        } else {
+            WidgetStyle.CATEGORY_AMOUNT_SMALL_SP
+        }
 }
 
+private const val MIN_COLUMNS = 2
+private const val MAX_CATEGORY_COLUMNS = 6
+private const val MAX_COIN_COLUMNS = 8
+
 private fun columnsFor(usableWidth: Float, minWidth: Float, max: Int): Int =
-    ((usableWidth + GAP_DP) / (minWidth + GAP_DP)).toInt().coerceIn(MIN_COLUMNS, max)
+    ((usableWidth + WidgetStyle.GAP) / (minWidth + WidgetStyle.GAP)).toInt().coerceIn(MIN_COLUMNS, max)
 
 private fun layoutFor(
     widthDp: Float,
@@ -115,33 +101,33 @@ private fun layoutFor(
     categoryCount: Int,
     coinCount: Int,
 ): WidgetLayout {
-    val compact = heightDp < COMPACT_BELOW_DP
-    val usableWidth = (widthDp - WIDGET_PADDING_DP).coerceAtLeast(CATEGORY_MIN_WIDTH_DP)
+    val compact = heightDp < WidgetStyle.COMPACT_BELOW
+    val usableWidth = (widthDp - WidgetStyle.OUTER_PADDING).coerceAtLeast(WidgetStyle.CATEGORY_MIN_WIDTH)
 
     // Four across is the shape the layout is drawn for; narrow widgets get fewer.
-    val categoryColumns = columnsFor(usableWidth, CATEGORY_MIN_WIDTH_DP, MAX_CATEGORY_COLUMNS)
-        .coerceAtMost(PREFERRED_CATEGORY_COLUMNS)
+    val categoryColumns = columnsFor(usableWidth, WidgetStyle.CATEGORY_MIN_WIDTH, MAX_CATEGORY_COLUMNS)
+        .coerceAtMost(WidgetStyle.CATEGORY_COLUMNS)
     // Coins fill their row rather than leaving gaps at the end.
-    val coinColumns = columnsFor(usableWidth, COIN_MIN_WIDTH_DP, MAX_COIN_COLUMNS)
+    val coinColumns = columnsFor(usableWidth, WidgetStyle.COIN_MIN_WIDTH, MAX_COIN_COLUMNS)
         .coerceAtMost(maxOf(1, coinCount))
 
     // A square tile: the side comes from the column width, then gets clamped.
-    val cellWidth = (usableWidth - (categoryColumns - 1) * GAP_DP) / categoryColumns
-    val side = cellWidth.coerceIn(CATEGORY_SIDE_MIN_DP, CATEGORY_SIDE_MAX_DP)
+    val cellWidth = (usableWidth - (categoryColumns - 1) * WidgetStyle.GAP) / categoryColumns
+    val side = cellWidth.coerceIn(WidgetStyle.CATEGORY_HEIGHT_MIN, WidgetStyle.CATEGORY_HEIGHT_MAX)
 
     val coinRows = if (coinCount == 0) 0 else (coinCount + coinColumns - 1) / coinColumns
-    val coinBand = if (coinRows == 0) 0f else coinRows * (COIN_HEIGHT_DP + GAP_DP)
+    val coinBand = if (coinRows == 0) 0f else coinRows * (WidgetStyle.COIN_HEIGHT + WidgetStyle.GAP)
 
-    val chrome = (if (compact) HEADER_COMPACT_DP else HEADER_DP + TOTALS_ROW_DP) +
-        ACTION_ROW_DP + VERTICAL_SLACK_DP + coinBand
+    val chrome = (if (compact) WidgetStyle.HEADER_COMPACT_HEIGHT else WidgetStyle.HEADER_HEIGHT + WidgetStyle.TOTALS_HEIGHT) +
+        WidgetStyle.ACTION_HEIGHT + WidgetStyle.GAP + coinBand
     val forCategories = (heightDp - chrome).coerceAtLeast(0f)
 
     val wantedRows = if (categoryCount == 0) 0 else (categoryCount + categoryColumns - 1) / categoryColumns
-    val fittingRows = (forCategories / (side + GAP_DP)).toInt()
+    val fittingRows = (forCategories / (side + WidgetStyle.GAP)).toInt()
     val categoryRows = minOf(wantedRows, maxOf(if (categoryCount == 0) 0 else 1, fittingRows))
 
-    val categoryBand = categoryRows * (side + GAP_DP)
-    val showTodayList = !compact && forCategories - categoryBand >= TODAY_LIST_MIN_DP
+    val categoryBand = categoryRows * (side + WidgetStyle.GAP)
+    val showTodayList = !compact
 
     return WidgetLayout(
         compact = compact,
@@ -222,8 +208,8 @@ private fun WidgetContent(
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(WidgetColors.background)
-            .cornerRadius(20.dp)
+            .background(WidgetStyle.background)
+            .cornerRadius(WidgetStyle.WIDGET_CORNER.dp)
             .padding(10.dp),
     ) {
         Header(data, message, layout.compact)
@@ -241,7 +227,7 @@ private fun WidgetContent(
 
         ActionRow()
 
-        if (layout.showTodayList) {
+        if (!layout.compact) {
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
         }
     }
@@ -263,11 +249,11 @@ private fun Header(data: WidgetData, message: String?, compact: Boolean) {
             maxLines = 1,
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(bottom = GAP_DP.dp)
+                .padding(bottom = WidgetStyle.GAP.dp)
                 .then(openApp),
             style = TextStyle(
-                color = WidgetColors.accent,
-                fontSize = 14.sp,
+                color = WidgetStyle.accent,
+                fontSize = WidgetStyle.MESSAGE_TEXT_SP.sp,
                 fontWeight = FontWeight.Medium,
             ),
         )
@@ -278,7 +264,7 @@ private fun Header(data: WidgetData, message: String?, compact: Boolean) {
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
-                .padding(bottom = GAP_DP.dp)
+                .padding(bottom = WidgetStyle.GAP.dp)
                 .then(openApp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -286,24 +272,24 @@ private fun Header(data: WidgetData, message: String?, compact: Boolean) {
                 text = Money.format(data.totals.balanceCents),
                 modifier = GlanceModifier.defaultWeight(),
                 style = TextStyle(
-                    color = WidgetColors.onDark,
-                    fontSize = 16.sp,
+                    color = WidgetStyle.onDark,
+                    fontSize = WidgetStyle.TOTALS_AMOUNT_SP.sp,
                     fontWeight = FontWeight.Bold,
                 ),
             )
             Text(
                 text = "hoy " + Money.format(data.totals.todayCents),
-                style = TextStyle(color = WidgetColors.muted, fontSize = 13.sp),
+                style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
             )
         }
         return
     }
 
-    Row(modifier = GlanceModifier.fillMaxWidth().padding(bottom = GAP_DP.dp).then(openApp)) {
+    Row(modifier = GlanceModifier.fillMaxWidth().padding(bottom = WidgetStyle.GAP.dp).then(openApp)) {
         HeaderCard(
             label = "Efectivo",
             value = Money.format(data.totals.balanceCents),
-            modifier = GlanceModifier.defaultWeight().padding(end = GAP_DP.dp),
+            modifier = GlanceModifier.defaultWeight().padding(end = WidgetStyle.GAP.dp),
         )
         HeaderCard(
             label = "Hoy",
@@ -317,17 +303,17 @@ private fun Header(data: WidgetData, message: String?, compact: Boolean) {
 private fun HeaderCard(label: String, value: String, modifier: GlanceModifier) {
     Column(
         modifier = modifier
-            .background(WidgetColors.key)
-            .cornerRadius(14.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        Text(label, style = TextStyle(color = WidgetColors.muted, fontSize = 11.sp))
+        Text(label, style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HEADER_LABEL_SP.sp))
         Text(
             text = value,
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
-                fontSize = 20.sp,
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.HEADER_AMOUNT_SP.sp,
                 fontWeight = FontWeight.Bold,
             ),
         )
@@ -339,9 +325,9 @@ private fun TotalsRow(data: WidgetData) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .padding(bottom = GAP_DP.dp)
-            .background(WidgetColors.key)
-            .cornerRadius(14.dp)
+            .padding(bottom = WidgetStyle.GAP.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -352,18 +338,18 @@ private fun TotalsRow(data: WidgetData) {
 
 @Composable
 private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier = modifier) {
         Text(
             text = label,
-            style = TextStyle(color = WidgetColors.muted, fontSize = 12.sp),
+            maxLines = 1,
+            style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.TOTALS_LABEL_SP.sp),
         )
-        Spacer(GlanceModifier.padding(end = 6.dp))
         Text(
             text = Money.format(cents),
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
-                fontSize = 15.sp,
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.TOTALS_AMOUNT_SP.sp,
                 fontWeight = FontWeight.Bold,
             ),
         )
@@ -379,7 +365,7 @@ private fun CategoryGrid(buttons: List<QuickButton>, layout: WidgetLayout) {
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .height((layout.categorySideDp + GAP_DP).dp),
+                    .height((layout.categorySideDp + WidgetStyle.GAP).dp),
             ) {
                 row.forEachIndexed { index, button ->
                     CategoryTile(
@@ -388,8 +374,8 @@ private fun CategoryGrid(buttons: List<QuickButton>, layout: WidgetLayout) {
                         modifier = GlanceModifier
                             .defaultWeight()
                             .padding(
-                                end = if (index < layout.categoryColumns - 1) GAP_DP.dp else 0.dp,
-                                bottom = GAP_DP.dp,
+                                end = if (index < layout.categoryColumns - 1) WidgetStyle.GAP.dp else 0.dp,
+                                bottom = WidgetStyle.GAP.dp,
                             ),
                     )
                 }
@@ -418,8 +404,8 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(WidgetColors.key)
-            .cornerRadius(16.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.CATEGORY_CORNER.dp)
             .padding(horizontal = 2.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -429,7 +415,7 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
             text = button.emoji + " " + button.label,
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
+                color = WidgetStyle.onDark,
                 fontSize = layout.categoryLabelSp.sp,
                 textAlign = TextAlign.Center,
             ),
@@ -438,7 +424,7 @@ private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: Gl
             text = button.fixedAmountCents?.let { Money.formatShort(it) } ?: "…",
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.accent,
+                color = WidgetStyle.accent,
                 fontSize = layout.categoryAmountSp.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -456,7 +442,7 @@ private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .height((COIN_HEIGHT_DP + GAP_DP).dp),
+                    .height((WidgetStyle.COIN_HEIGHT + WidgetStyle.GAP).dp),
             ) {
                 row.forEachIndexed { index, coin ->
                     CoinButton(
@@ -464,8 +450,8 @@ private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
                         modifier = GlanceModifier
                             .defaultWeight()
                             .padding(
-                                end = if (index < layout.coinColumns - 1) GAP_DP.dp else 0.dp,
-                                bottom = GAP_DP.dp,
+                                end = if (index < layout.coinColumns - 1) WidgetStyle.GAP.dp else 0.dp,
+                                bottom = WidgetStyle.GAP.dp,
                             ),
                     )
                 }
@@ -494,8 +480,8 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(WidgetColors.key)
-            .cornerRadius(12.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.COIN_CORNER.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
@@ -504,8 +490,8 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
             text = coin.fixedAmountCents?.let { Money.formatShort(it) } ?: coin.label,
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
-                fontSize = 15.sp,
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.COIN_TEXT_SP.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             ),
@@ -516,10 +502,10 @@ private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
 @Composable
 private fun ActionRow() {
     val context = LocalContext.current
-    Row(modifier = GlanceModifier.fillMaxWidth().height(ACTION_ROW_DP.dp)) {
+    Row(modifier = GlanceModifier.fillMaxWidth().height(WidgetStyle.ACTION_HEIGHT.dp)) {
         ActionCell(
             label = "Otro…",
-            modifier = GlanceModifier.defaultWeight().padding(end = GAP_DP.dp),
+            modifier = GlanceModifier.defaultWeight().padding(end = WidgetStyle.GAP.dp),
             action = GlanceModifier.clickable(
                 actionStartActivity(QuickEntryActivity.intent(context, categoryId = null))
             ),
@@ -537,8 +523,8 @@ private fun ActionCell(label: String, modifier: GlanceModifier, action: GlanceMo
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(WidgetColors.key)
-            .cornerRadius(14.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
@@ -547,8 +533,8 @@ private fun ActionCell(label: String, modifier: GlanceModifier, action: GlanceMo
             text = label,
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
-                fontSize = 15.sp,
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.ACTION_TEXT_SP.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
             ),
@@ -562,20 +548,20 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = GAP_DP.dp)
-            .background(WidgetColors.key)
-            .cornerRadius(14.dp)
+            .padding(top = WidgetStyle.GAP.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         if (expenses.isEmpty()) {
             Text(
                 text = "Sin gastos hoy",
-                style = TextStyle(color = WidgetColors.muted, fontSize = 13.sp),
+                style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
             )
             return@Column
         }
         LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-            items(expenses.take(MAX_TODAY_ROWS), itemId = { it.id }) { expense ->
+            items(expenses.take(WidgetStyle.HISTORY_MAX_ROWS), itemId = { it.id }) { expense ->
                 Row(
                     modifier = GlanceModifier.fillMaxWidth().padding(vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -585,14 +571,14 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
                             (expense.note?.takeIf { it.isNotBlank() } ?: expense.categoryName),
                         maxLines = 1,
                         modifier = GlanceModifier.defaultWeight(),
-                        style = TextStyle(color = WidgetColors.onDark, fontSize = 13.sp),
+                        style = TextStyle(color = WidgetStyle.onDark, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
                     )
                     Text(
                         text = Money.format(expense.amountCents),
                         maxLines = 1,
                         style = TextStyle(
-                            color = WidgetColors.onDark,
-                            fontSize = 13.sp,
+                            color = WidgetStyle.onDark,
+                            fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
                             fontWeight = FontWeight.Bold,
                         ),
                     )

@@ -10,8 +10,10 @@ import io.github.joaquinjbg.efectivo.data.ExpenseDao
 import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
 import io.github.joaquinjbg.efectivo.data.QuickButton
 import io.github.joaquinjbg.efectivo.data.QuickButtonDao
+import io.github.joaquinjbg.efectivo.data.WidgetTotals
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /** In-memory stand-ins for the Room DAOs so the repository can be tested on the JVM. */
@@ -101,6 +103,36 @@ class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
 
     override suspend fun latestWithCategory(): ExpenseWithCategory? =
         store.sorted(store.expenses.value).firstOrNull()?.let(store::join)
+
+    private fun totals(
+        dayFrom: Long, dayUntil: Long,
+        weekFrom: Long, weekUntil: Long,
+        monthFrom: Long, monthUntil: Long,
+    ): WidgetTotals {
+        fun sum(from: Long, until: Long) =
+            store.expenses.value.filter { it.timestamp in from until until }.sumOf { it.amountCents }
+        return WidgetTotals(
+            balanceCents = store.cash.value.sumOf { it.amountCents } -
+                store.expenses.value.sumOf { it.amountCents },
+            todayCents = sum(dayFrom, dayUntil),
+            weekCents = sum(weekFrom, weekUntil),
+            monthCents = sum(monthFrom, monthUntil),
+        )
+    }
+
+    override fun observeWidgetTotals(
+        dayFrom: Long, dayUntil: Long,
+        weekFrom: Long, weekUntil: Long,
+        monthFrom: Long, monthUntil: Long,
+    ): Flow<WidgetTotals> = combine(store.expenses, store.cash) { _, _ ->
+        totals(dayFrom, dayUntil, weekFrom, weekUntil, monthFrom, monthUntil)
+    }
+
+    override suspend fun widgetTotals(
+        dayFrom: Long, dayUntil: Long,
+        weekFrom: Long, weekUntil: Long,
+        monthFrom: Long, monthUntil: Long,
+    ): WidgetTotals = totals(dayFrom, dayUntil, weekFrom, weekUntil, monthFrom, monthUntil)
 
     override fun observeTotalsByCategory(from: Long, until: Long): Flow<List<CategoryTotal>> =
         store.expenses.map { list ->

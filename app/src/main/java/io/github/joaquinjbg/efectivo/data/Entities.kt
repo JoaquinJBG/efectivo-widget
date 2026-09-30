@@ -66,6 +66,19 @@ data class ExpenseWithCategory(
     val categoryEmoji: String,
 )
 
+/**
+ * Every number the widget header needs, in one row.
+ *
+ * The widget is the latency-critical surface, so it reads this instead of
+ * subscribing to four separate aggregate queries.
+ */
+data class WidgetTotals(
+    val balanceCents: Long,
+    val todayCents: Long,
+    val weekCents: Long,
+    val monthCents: Long,
+)
+
 /** One row of the monthly breakdown. */
 data class CategoryTotal(
     val categoryId: Long,

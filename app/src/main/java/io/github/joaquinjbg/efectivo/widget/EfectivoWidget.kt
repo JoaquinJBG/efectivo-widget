@@ -40,14 +40,13 @@ import androidx.glance.unit.ColorProvider
 import io.github.joaquinjbg.efectivo.Graph
 import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
 import io.github.joaquinjbg.efectivo.data.QuickButton
+import io.github.joaquinjbg.efectivo.data.WidgetTotals
 import io.github.joaquinjbg.efectivo.ui.MainActivity
 import io.github.joaquinjbg.efectivo.ui.quick.QuickEntryActivity
 import io.github.joaquinjbg.efectivo.util.Money
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import java.time.YearMonth
-
-private const val COLUMNS = 3
 
 /** Newer rows are pushed off the widget rather than building an unbounded RemoteViews tree. */
 private const val MAX_TODAY_ROWS = 20
@@ -61,6 +60,11 @@ private enum class WidgetLevel { COMPACT, LARGE, FULL }
 
 // Rough heights used to work out how many button rows fit. RemoteViews cannot measure,
 // so these are estimates of what each block costs once drawn.
+private const val MIN_COLUMNS = 2
+private const val MAX_COLUMNS = 6
+private const val BUTTON_MIN_WIDTH_DP = 72f
+private const val BUTTON_GAP_DP = 6f
+private const val WIDGET_PADDING_DP = 20f
 private const val HEADER_COMPACT_DP = 22f
 private const val HEADER_FULL_DP = 46f
 private const val TOTALS_ROW_DP = 40f
@@ -84,30 +88,23 @@ object EfectivoWidget : GlanceAppWidget() {
         val today = LocalDate.now()
         val month = YearMonth.from(today)
 
-        // One combined flow instead of several: a redraw costs a single emission.
+        // Two subscriptions, not five: all four totals come from one SQL round trip.
         val data = combine(
-            repository.observeBalance(),
-            repository.observeTotalOn(today),
-            repository.observeTotalOfWeek(today),
-            repository.observeTotalOfMonth(month),
+            repository.observeWidgetTotals(today, month),
             repository.observeEnabledQuickButtons(),
-        ) { balance, dayTotal, weekTotal, monthTotal, buttons ->
-            WidgetData(balance, dayTotal, weekTotal, monthTotal, buttons)
-        }
+        ) { totals, buttons -> WidgetData(totals, buttons) }
         val todayExpenses = repository.observeExpensesOn(today)
 
+        // Seeded so the first frame shows real numbers instead of zeros. The day list is
+        // not seeded: it only appears on the largest size and costs a query every redraw.
         val initial = WidgetData(
-            balanceCents = repository.balance(),
-            todayCents = repository.totalOn(today),
-            weekCents = repository.totalOfWeek(today),
-            monthCents = repository.totalOfMonth(month),
+            totals = repository.widgetTotals(today, month),
             buttons = repository.enabledQuickButtons(),
         )
-        val initialExpenses = repository.expensesOn(today)
 
         provideContent {
             val state by data.collectAsState(initial = initial)
-            val expenses by todayExpenses.collectAsState(initial = initialExpenses)
+            val expenses by todayExpenses.collectAsState(initial = emptyList())
             WidgetContent(
                 data = state,
                 todayExpenses = expenses,
@@ -118,12 +115,14 @@ object EfectivoWidget : GlanceAppWidget() {
 }
 
 private data class WidgetData(
-    val balanceCents: Long = 0L,
-    val todayCents: Long = 0L,
-    val weekCents: Long = 0L,
-    val monthCents: Long = 0L,
+    val totals: WidgetTotals = WidgetTotals(0L, 0L, 0L, 0L),
     val buttons: List<QuickButton> = emptyList(),
-)
+) {
+    val balanceCents: Long get() = totals.balanceCents
+    val todayCents: Long get() = totals.todayCents
+    val weekCents: Long get() = totals.weekCents
+    val monthCents: Long get() = totals.monthCents
+}
 
 @Composable
 private fun WidgetContent(
@@ -131,9 +130,16 @@ private fun WidgetContent(
     todayExpenses: List<ExpenseWithCategory>,
     message: String?,
 ) {
-    val heightDp = LocalSize.current.height.value
+    val size = LocalSize.current
+    val heightDp = size.height.value
     val level = levelFor(heightDp)
     val compact = level == WidgetLevel.COMPACT
+
+    // Columns follow the width: a wider widget shows more buttons per row.
+    val usableWidth = size.width.value - WIDGET_PADDING_DP
+    val columns = ((usableWidth + BUTTON_GAP_DP) / (BUTTON_MIN_WIDTH_DP + BUTTON_GAP_DP))
+        .toInt()
+        .coerceIn(MIN_COLUMNS, MAX_COLUMNS)
 
     // Only draw the button rows that actually fit, so a small widget is not clipped.
     val reserved = (if (compact) HEADER_COMPACT_DP else HEADER_FULL_DP) +
@@ -158,14 +164,16 @@ private fun WidgetContent(
         }
 
         Spacer(GlanceModifier.height(8.dp))
-        QuickButtonGrid(data.buttons.take(visibleRows * COLUMNS))
+        QuickButtonGrid(data.buttons.take(visibleRows * columns), columns)
+
+        // Kept directly under the grid: when the day list grew it used to push
+        // "Deshacer" off the bottom of a tall widget.
+        ActionRow()
 
         if (level == WidgetLevel.FULL) {
+            Spacer(GlanceModifier.height(8.dp))
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
-            Spacer(GlanceModifier.height(6.dp))
         }
-
-        ActionRow()
     }
 }
 
@@ -286,14 +294,14 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
 }
 
 @Composable
-private fun QuickButtonGrid(buttons: List<QuickButton>) {
-    buttons.chunked(COLUMNS).forEach { row ->
+private fun QuickButtonGrid(buttons: List<QuickButton>, columns: Int) {
+    buttons.chunked(columns).forEach { row ->
         Row(modifier = GlanceModifier.fillMaxWidth()) {
             row.forEach { button ->
                 QuickButtonCell(button, GlanceModifier.defaultWeight())
                 Spacer(GlanceModifier.width(6.dp))
             }
-            repeat(COLUMNS - row.size) {
+            repeat(columns - row.size) {
                 Spacer(GlanceModifier.defaultWeight())
             }
         }

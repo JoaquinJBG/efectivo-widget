@@ -51,6 +51,25 @@ class ExpenseRepository(
         return expenseDao.totalBetween(from, until)
     }
 
+    /** Balance, day, week and month in a single query — used by the widget. */
+    fun observeWidgetTotals(date: LocalDate, month: YearMonth): Flow<WidgetTotals> {
+        val (dayFrom, dayUntil) = TimeRanges.day(date, zone)
+        val (weekFrom, weekUntil) = TimeRanges.week(date, zone)
+        val (monthFrom, monthUntil) = TimeRanges.month(month, zone)
+        return expenseDao.observeWidgetTotals(
+            dayFrom, dayUntil, weekFrom, weekUntil, monthFrom, monthUntil,
+        )
+    }
+
+    suspend fun widgetTotals(date: LocalDate, month: YearMonth): WidgetTotals {
+        val (dayFrom, dayUntil) = TimeRanges.day(date, zone)
+        val (weekFrom, weekUntil) = TimeRanges.week(date, zone)
+        val (monthFrom, monthUntil) = TimeRanges.month(month, zone)
+        return expenseDao.widgetTotals(
+            dayFrom, dayUntil, weekFrom, weekUntil, monthFrom, monthUntil,
+        )
+    }
+
     fun observeTotalOfWeek(date: LocalDate): Flow<Long> {
         val (from, until) = TimeRanges.week(date, zone)
         return expenseDao.observeTotalBetween(from, until)

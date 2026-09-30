@@ -195,6 +195,27 @@ class ExpenseRepositoryTest {
     }
 
     @Test
+    fun `widget totals agree with the individual queries`() = runTest {
+        val today = LocalDate.of(2026, 9, 29)
+        val month = YearMonth.from(today)
+        val monday = today.with(java.time.DayOfWeek.MONDAY)
+
+        repository.addCash(20000)
+        repository.addExpense(250, cafe, null, ExpenseSource.WIDGET, at(today, 9))
+        repository.addExpense(1500, ocio, null, ExpenseSource.APP, at(monday, 12))
+        repository.addExpense(4000, gasoil, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 2)))
+        repository.addExpense(999, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 8, 15)))
+
+        val totals = repository.widgetTotals(today, month)
+
+        assertEquals(repository.balance(), totals.balanceCents)
+        assertEquals(repository.totalOn(today), totals.todayCents)
+        assertEquals(repository.totalOfWeek(today), totals.weekCents)
+        assertEquals(repository.totalOfMonth(month), totals.monthCents)
+        assertEquals(totals, repository.observeWidgetTotals(today, month).first())
+    }
+
+    @Test
     fun `expenses of a day are newest first`() = runTest {
         val day = LocalDate.of(2026, 9, 29)
         repository.addExpense(100, cafe, null, ExpenseSource.WIDGET, at(day, 8))

@@ -92,6 +92,46 @@ interface ExpenseDao {
     suspend fun latestWithCategory(): ExpenseWithCategory?
 
     @Query(
+        "SELECT " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM cash_movements) - " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses) AS balanceCents, " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses " +
+            "WHERE timestamp >= :dayFrom AND timestamp < :dayUntil) AS todayCents, " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses " +
+            "WHERE timestamp >= :weekFrom AND timestamp < :weekUntil) AS weekCents, " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses " +
+            "WHERE timestamp >= :monthFrom AND timestamp < :monthUntil) AS monthCents"
+    )
+    fun observeWidgetTotals(
+        dayFrom: Long,
+        dayUntil: Long,
+        weekFrom: Long,
+        weekUntil: Long,
+        monthFrom: Long,
+        monthUntil: Long,
+    ): Flow<WidgetTotals>
+
+    @Query(
+        "SELECT " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM cash_movements) - " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses) AS balanceCents, " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses " +
+            "WHERE timestamp >= :dayFrom AND timestamp < :dayUntil) AS todayCents, " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses " +
+            "WHERE timestamp >= :weekFrom AND timestamp < :weekUntil) AS weekCents, " +
+            "(SELECT COALESCE(SUM(amountCents), 0) FROM expenses " +
+            "WHERE timestamp >= :monthFrom AND timestamp < :monthUntil) AS monthCents"
+    )
+    suspend fun widgetTotals(
+        dayFrom: Long,
+        dayUntil: Long,
+        weekFrom: Long,
+        weekUntil: Long,
+        monthFrom: Long,
+        monthUntil: Long,
+    ): WidgetTotals
+
+    @Query(
         "SELECT c.id AS categoryId, c.name AS categoryName, c.emoji AS categoryEmoji, " +
             "COALESCE(SUM(e.amountCents), 0) AS totalCents " +
             "FROM expenses e JOIN categories c ON c.id = e.categoryId " +

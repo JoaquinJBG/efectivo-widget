@@ -75,7 +75,7 @@ object WidgetStyle {
     const val CATEGORY_GAP = 8f
 
     /** Entre los botones de moneda. */
-    const val COIN_GAP = 6f
+    const val COIN_GAP = 8f
 
     /** Entre "Otro…" y "Deshacer". */
     const val ACTION_GAP = 10f

@@ -93,6 +93,9 @@ private const val MIN_COLUMNS = 2
 private const val MAX_CATEGORY_COLUMNS = 6
 private const val MAX_COIN_COLUMNS = 8
 
+/** Por encima de esto, una fila de monedas se parte en dos grupos (ver CoinRow). */
+private const val MAX_COINS_PER_GROUP = 5
+
 private fun columnsFor(usableWidth: Float, minWidth: Float, max: Int): Int =
     ((usableWidth + WidgetStyle.GAP) / (minWidth + WidgetStyle.GAP)).toInt().coerceIn(MIN_COLUMNS, max)
 
@@ -229,6 +232,9 @@ private fun WidgetContent(
         ActionRow()
 
         if (!layout.compact) {
+            // Separador real: un padding(top) dentro de TodayList lo anulaba su propio
+            // relleno interno, que es la trampa de siempre en Glance.
+            Spacer(GlanceModifier.height(WidgetStyle.HISTORY_TOP_GAP.dp))
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
         }
     }
@@ -467,21 +473,36 @@ private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
                     .fillMaxWidth()
                     .height(WidgetStyle.COIN_HEIGHT.dp),
             ) {
-                // Medio hueco a cada lado de cada moneda: entre dos suman COIN_GAP y
-                // todas quedan del mismo ancho. Con un Spacer entre cada par serian 11
-                // hijos y Glance descarta a partir del decimo (se perdia el de 50).
-                row.forEach { coin ->
-                    CoinButton(
-                        coin = coin,
-                        modifier = GlanceModifier
-                            .defaultWeight()
-                            .padding(horizontal = (WidgetStyle.COIN_GAP / 2f).dp),
-                    )
-                }
-                repeat(layout.coinColumns - row.size) {
-                    Spacer(GlanceModifier.defaultWeight())
+                // Glance solo trae layouts de hasta 10 hijos, y 6 monedas con un
+                // separador entre cada dos serian 11. Se parten en dos grupos, y
+                // dentro de cada uno ya caben los separadores: asi todas miden lo
+                // mismo y no sobra medio hueco en los extremos de la fila.
+                if (row.size > MAX_COINS_PER_GROUP && row.size % 2 == 0) {
+                    val half = row.size / 2
+                    CoinGroup(row.take(half), GlanceModifier.defaultWeight())
+                    Spacer(GlanceModifier.width(WidgetStyle.COIN_GAP.dp))
+                    CoinGroup(row.drop(half), GlanceModifier.defaultWeight())
+                } else {
+                    row.forEachIndexed { index, coin ->
+                        if (index > 0) Spacer(GlanceModifier.width(WidgetStyle.COIN_GAP.dp))
+                        CoinButton(coin = coin, modifier = GlanceModifier.defaultWeight())
+                    }
+                    repeat(layout.coinColumns - row.size) {
+                        Spacer(GlanceModifier.defaultWeight())
+                    }
                 }
             }
+        }
+    }
+}
+
+/** Mitad de una fila de monedas, con sus propios separadores. */
+@Composable
+private fun CoinGroup(coins: List<QuickButton>, modifier: GlanceModifier) {
+    Row(modifier = modifier.fillMaxHeight()) {
+        coins.forEachIndexed { index, coin ->
+            if (index > 0) Spacer(GlanceModifier.width(WidgetStyle.COIN_GAP.dp))
+            CoinButton(coin = coin, modifier = GlanceModifier.defaultWeight())
         }
     }
 }
@@ -574,7 +595,6 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = WidgetStyle.HISTORY_TOP_GAP.dp)
             .background(WidgetStyle.card)
             .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .padding(

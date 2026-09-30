@@ -12,6 +12,12 @@ data class Category(
     val name: String,
     val emoji: String,
     val sortOrder: Int,
+    /**
+     * Borrar el botón archiva su categoría en vez de eliminarla: así deja de ofrecerse
+     * para gastos nuevos, pero los que ya estaban siguen mostrando su nombre en el
+     * historial y en el resumen del mes.
+     */
+    val archived: Boolean = false,
 )
 
 @Entity(

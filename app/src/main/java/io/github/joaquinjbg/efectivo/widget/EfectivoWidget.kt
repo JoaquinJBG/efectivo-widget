@@ -22,7 +22,6 @@ import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -173,11 +172,7 @@ object EfectivoWidget : GlanceAppWidget() {
         provideContent {
             val state by data.collectAsState(initial = initial)
             val expenses by todayExpenses.collectAsState(initial = emptyList())
-            WidgetContent(
-                data = state,
-                todayExpenses = expenses,
-                message = currentState(WidgetMessageKey),
-            )
+            WidgetContent(data = state, todayExpenses = expenses)
         }
     }
 }
@@ -191,11 +186,7 @@ private data class WidgetData(
 }
 
 @Composable
-private fun WidgetContent(
-    data: WidgetData,
-    todayExpenses: List<ExpenseWithCategory>,
-    message: String?,
-) {
+private fun WidgetContent(data: WidgetData, todayExpenses: List<ExpenseWithCategory>) {
     val size = LocalSize.current
     val layout = layoutFor(
         widthDp = size.width.value,
@@ -216,7 +207,7 @@ private fun WidgetContent(
             .cornerRadius(WidgetStyle.WIDGET_CORNER.dp)
             .padding(WidgetStyle.OUTER_PADDING.dp),
     ) {
-        Header(data, message, layout.compact)
+        Header(data, layout.compact)
 
         if (!layout.compact) {
             TotalsRow(data)
@@ -240,30 +231,13 @@ private fun WidgetContent(
 
 /** Two separate cards: balance on the left, today's spend on the right. Opens the app. */
 @Composable
-private fun Header(data: WidgetData, message: String?, compact: Boolean) {
+private fun Header(data: WidgetData, compact: Boolean) {
     val context = LocalContext.current
     val openApp = GlanceModifier.clickable(
         actionStartActivity(
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     )
-
-    if (message != null) {
-        Text(
-            text = message,
-            maxLines = 1,
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .padding(bottom = WidgetStyle.GAP.dp)
-                .then(openApp),
-            style = TextStyle(
-                color = WidgetStyle.accent,
-                fontSize = WidgetStyle.MESSAGE_TEXT_SP.sp,
-                fontWeight = FontWeight.Medium,
-            ),
-        )
-        return
-    }
 
     if (compact) {
         Row(
@@ -574,7 +548,7 @@ private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModif
 /** One expense: concept, amount, and a ✕ that deletes just that one. */
 @Composable
 private fun HistoryRow(expense: ExpenseWithCategory) {
-    val concept = expense.note?.takeIf { it.isNotBlank() } ?: expense.categoryName
+    val note = expense.note?.takeIf { it.isNotBlank() }
     val amount = Money.format(expense.amountCents)
 
     Row(
@@ -583,15 +557,26 @@ private fun HistoryRow(expense: ExpenseWithCategory) {
             .padding(vertical = WidgetStyle.HISTORY_ROW_PADDING.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = expense.categoryEmoji + " " + concept,
-            maxLines = 1,
-            modifier = GlanceModifier.defaultWeight(),
-            style = TextStyle(
-                color = WidgetStyle.onDark,
-                fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
-            ),
-        )
+        Column(modifier = GlanceModifier.defaultWeight()) {
+            Text(
+                text = expense.categoryEmoji + " " + expense.categoryName,
+                maxLines = 1,
+                style = TextStyle(
+                    color = WidgetStyle.onDark,
+                    fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
+                ),
+            )
+            if (!note.isNullOrBlank()) {
+                Text(
+                    text = note,
+                    maxLines = 1,
+                    style = TextStyle(
+                        color = WidgetStyle.noteText,
+                        fontSize = WidgetStyle.HISTORY_NOTE_SP.sp,
+                    ),
+                )
+            }
+        }
         Text(
             text = amount,
             maxLines = 1,
@@ -612,10 +597,7 @@ private fun HistoryRow(expense: ExpenseWithCategory) {
                 )
                 .clickable(
                     actionRunCallback<DeleteExpenseAction>(
-                        actionParametersOf(
-                            WidgetParams.expenseId to expense.id,
-                            WidgetParams.expenseLabel to "$concept $amount",
-                        )
+                        actionParametersOf(WidgetParams.expenseId to expense.id)
                     )
                 ),
             style = TextStyle(

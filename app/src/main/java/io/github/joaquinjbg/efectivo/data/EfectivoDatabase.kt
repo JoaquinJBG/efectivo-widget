@@ -31,9 +31,18 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** Archivar en vez de borrar, para no perder el nombre en el historial. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "ALTER TABLE categories ADD COLUMN archived INTEGER NOT NULL DEFAULT 0"
+        )
+    }
+}
+
 @Database(
     entities = [Category::class, Expense::class, CashMovement::class, QuickButton::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -53,7 +62,7 @@ abstract class EfectivoDatabase : RoomDatabase() {
                     context.applicationContext,
                     EfectivoDatabase::class.java,
                     "efectivo.db",
-                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
             }
     }
 }

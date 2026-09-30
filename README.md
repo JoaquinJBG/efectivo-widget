@@ -97,6 +97,15 @@ resuelve el widget en cada composición.
   La excepción son los botones de moneda: al ser seis, un `Spacer` entre cada dos
   pasaría del límite de 10 hijos, y como no tienen relleno propio el `padding` sí vale.
 
+## Lo que no se pudo
+
+- **El widget no llega a ancho y alto maximos a la vez en MagicOS.** Se dejo con la
+  misma declaracion que el widget grande de WPS —el unico del movil que si lo
+  consigue— atributo por atributo, y aun asi el launcher nos da 4 columnas y a el 5.
+  Medido con `uiautomator dump`: WPS ocupa 1006x1722 px y nosotros 800x1722. Tambien
+  se probo a registrar el provider con otro nombre, por si el launcher cacheaba los
+  limites. No hay nada mas que tocar en `appwidget-provider`.
+
 ## Fuera de alcance
 
 Sincronización, copias de seguridad, varias monedas, presupuestos, login, tablets,

@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Las medidas salen de igualar el widget grande de WPS, el unico de este movil que
+  llega a ancho y alto maximos a la vez. Ni asi: con una declaracion identica,
+  MagicOS nos deja 4 columnas y a el 5. No hay nada mas que tocar aqui.
+
+  targetCellWidth/Height a proposito sin declarar: con ellos el launcher limitaba
+  aun mas el redimensionado.
+-->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_description"
     android:initialLayout="@layout/glance_default_loading_layout"
-    android:minWidth="250dp"
-    android:minHeight="180dp"
-    android:minResizeWidth="140dp"
+    android:previewImage="@mipmap/ic_launcher"
+    android:minWidth="300dp"
+    android:minHeight="250dp"
+    android:minResizeWidth="180dp"
     android:minResizeHeight="110dp"
-    android:maxResizeWidth="420dp"
-    android:maxResizeHeight="800dp"
     android:resizeMode="horizontal|vertical"
-    android:targetCellWidth="4"
-    android:targetCellHeight="3"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen" />

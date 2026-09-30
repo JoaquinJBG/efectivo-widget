@@ -34,7 +34,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <receiver
-            android:name=".widget.EfectivoWidgetReceiver"
+            android:name=".widget.EfectivoWidgetReceiver2"
             android:exported="true"
             android:label="@string/app_name">
             <intent-filter>

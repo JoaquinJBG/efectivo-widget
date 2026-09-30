@@ -11,6 +11,7 @@ import io.github.joaquinjbg.efectivo.Graph
 import io.github.joaquinjbg.efectivo.data.ExpenseSource
 import io.github.joaquinjbg.efectivo.util.Haptics
 import io.github.joaquinjbg.efectivo.util.Money
+import io.github.joaquinjbg.efectivo.util.Perf
 import kotlinx.coroutines.delay
 
 /** Text shown briefly in the widget header after an action. */
@@ -54,25 +55,38 @@ class QuickAddAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
+        val t0 = Perf.now()
         val buttonId = parameters[WidgetParams.buttonId] ?: return
-        if (!TapGuard.accept("add:$buttonId")) return
+        if (!TapGuard.accept("add:$buttonId")) {
+            Perf.mark("QuickAdd: descartado por doble toque")
+            return
+        }
+        Perf.mark("QuickAdd: callback recibido")
 
         // Buzz first: the only feedback that does not wait for the database or a redraw.
         Haptics.tick(context)
+        Perf.step("QuickAdd: vibracion", t0)
 
         val repository = Graph.repository(context)
+        Perf.step("QuickAdd: repositorio listo", t0)
+
         val button = repository.quickButtonById(buttonId) ?: return
         val amount = button.fixedAmountCents ?: return
+        Perf.step("QuickAdd: boton leido", t0)
 
         // Stage the header message before the write, so the refresh the repository
         // triggers paints balance, today's total and the message in one pass.
         setMessage(context, glanceId, button.label + " " + Money.formatShort(amount))
+        Perf.step("QuickAdd: mensaje en el estado", t0)
+
         repository.addExpense(
             amountCents = amount,
             categoryId = button.categoryId,
             note = null,
             source = ExpenseSource.WIDGET,
         )
+        Perf.step("QuickAdd: insert + repintado COMPLETO", t0)
+
         clearMessageLater(context, glanceId)
     }
 }

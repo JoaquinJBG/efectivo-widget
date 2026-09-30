@@ -44,6 +44,7 @@ import io.github.joaquinjbg.efectivo.data.WidgetTotals
 import io.github.joaquinjbg.efectivo.ui.MainActivity
 import io.github.joaquinjbg.efectivo.ui.quick.QuickEntryActivity
 import io.github.joaquinjbg.efectivo.util.Money
+import io.github.joaquinjbg.efectivo.util.Perf
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import java.time.YearMonth
@@ -58,20 +59,28 @@ private const val MAX_TODAY_ROWS = 20
  */
 private enum class WidgetLevel { COMPACT, LARGE, FULL }
 
-// Rough heights used to work out how many button rows fit. RemoteViews cannot measure,
+// Rough heights used to share out the space. RemoteViews cannot measure itself,
 // so these are estimates of what each block costs once drawn.
 private const val MIN_COLUMNS = 2
 private const val MAX_COLUMNS = 6
-private const val BUTTON_MIN_WIDTH_DP = 72f
+
+/** Wide enough that "Desayuno" and "50 €" are not cut off. */
+private const val BUTTON_MIN_WIDTH_DP = 92f
 private const val BUTTON_GAP_DP = 6f
 private const val WIDGET_PADDING_DP = 20f
 private const val HEADER_COMPACT_DP = 22f
 private const val HEADER_FULL_DP = 46f
 private const val TOTALS_ROW_DP = 40f
 private const val ACTION_ROW_DP = 46f
-private const val BUTTON_ROW_DP = 58f
-private const val TODAY_LIST_MIN_DP = 100f
+private const val TODAY_LIST_MIN_DP = 120f
 private const val VERTICAL_SLACK_DP = 28f
+
+/** A button row never shrinks below this, and never grows past it. */
+private const val BUTTON_ROW_MIN_DP = 52f
+private const val BUTTON_ROW_MAX_DP = 132f
+
+/** Height a row wants before the leftover space is offered to the day list. */
+private const val BUTTON_ROW_COMFORTABLE_DP = 76f
 
 private fun levelFor(heightDp: Float): WidgetLevel = when {
     heightDp >= 420f -> WidgetLevel.FULL
@@ -79,14 +88,71 @@ private fun levelFor(heightDp: Float): WidgetLevel = when {
     else -> WidgetLevel.COMPACT
 }
 
+/** How the button grid is laid out once the surrounding chrome has taken its share. */
+private data class GridLayout(
+    val columns: Int,
+    val rows: Int,
+    val rowHeightDp: Float,
+    val showTodayList: Boolean,
+) {
+    /** Type scales with the buttons, so a tall widget reads from further away. */
+    val labelSp: Float get() = when {
+        rowHeightDp >= 110f -> 18f
+        rowHeightDp >= 90f -> 16f
+        rowHeightDp >= 68f -> 14f
+        else -> 12f
+    }
+
+    val amountSp: Float get() = when {
+        rowHeightDp >= 110f -> 28f
+        rowHeightDp >= 90f -> 24f
+        rowHeightDp >= 68f -> 20f
+        else -> 16f
+    }
+}
+
+private fun layoutFor(
+    widthDp: Float,
+    heightDp: Float,
+    buttonCount: Int,
+    level: WidgetLevel,
+): GridLayout {
+    val usableWidth = widthDp - WIDGET_PADDING_DP
+    val columns = ((usableWidth + BUTTON_GAP_DP) / (BUTTON_MIN_WIDTH_DP + BUTTON_GAP_DP))
+        .toInt()
+        .coerceIn(MIN_COLUMNS, MAX_COLUMNS)
+
+    val chrome = (if (level == WidgetLevel.COMPACT) HEADER_COMPACT_DP else HEADER_FULL_DP) +
+        (if (level == WidgetLevel.COMPACT) 0f else TOTALS_ROW_DP) +
+        ACTION_ROW_DP +
+        VERTICAL_SLACK_DP
+    val forGrid = (heightDp - chrome).coerceAtLeast(BUTTON_ROW_MIN_DP)
+
+    val wantedRows = if (buttonCount == 0) 1 else (buttonCount + columns - 1) / columns
+    val fittingRows = maxOf(1, (forGrid / BUTTON_ROW_MIN_DP).toInt())
+    val rows = minOf(wantedRows, fittingRows)
+
+    // The day list only earns space once every button row already has a comfortable height.
+    val comfortable = rows * BUTTON_ROW_COMFORTABLE_DP
+    val showTodayList = level == WidgetLevel.FULL &&
+        forGrid - comfortable >= TODAY_LIST_MIN_DP
+
+    val gridHeight = if (showTodayList) comfortable else forGrid
+    val rowHeight = (gridHeight / rows).coerceIn(BUTTON_ROW_MIN_DP, BUTTON_ROW_MAX_DP)
+
+    return GridLayout(columns, rows, rowHeight, showTodayList)
+}
+
 object EfectivoWidget : GlanceAppWidget() {
 
     override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val t0 = Perf.now()
         val repository = Graph.repository(context)
         val today = LocalDate.now()
         val month = YearMonth.from(today)
+        Perf.step("provideGlance: repositorio listo", t0)
 
         // Two subscriptions, not five: all four totals come from one SQL round trip.
         val data = combine(
@@ -101,8 +167,10 @@ object EfectivoWidget : GlanceAppWidget() {
             totals = repository.widgetTotals(today, month),
             buttons = repository.enabledQuickButtons(),
         )
+        Perf.step("provideGlance: consultas iniciales", t0)
 
         provideContent {
+            Perf.step("provideGlance: composicion", t0)
             val state by data.collectAsState(initial = initial)
             val expenses by todayExpenses.collectAsState(initial = emptyList())
             WidgetContent(
@@ -134,20 +202,12 @@ private fun WidgetContent(
     val heightDp = size.height.value
     val level = levelFor(heightDp)
     val compact = level == WidgetLevel.COMPACT
-
-    // Columns follow the width: a wider widget shows more buttons per row.
-    val usableWidth = size.width.value - WIDGET_PADDING_DP
-    val columns = ((usableWidth + BUTTON_GAP_DP) / (BUTTON_MIN_WIDTH_DP + BUTTON_GAP_DP))
-        .toInt()
-        .coerceIn(MIN_COLUMNS, MAX_COLUMNS)
-
-    // Only draw the button rows that actually fit, so a small widget is not clipped.
-    val reserved = (if (compact) HEADER_COMPACT_DP else HEADER_FULL_DP) +
-        (if (compact) 0f else TOTALS_ROW_DP) +
-        ACTION_ROW_DP +
-        VERTICAL_SLACK_DP +
-        (if (level == WidgetLevel.FULL) TODAY_LIST_MIN_DP else 0f)
-    val visibleRows = maxOf(1, ((heightDp - reserved) / BUTTON_ROW_DP).toInt())
+    val grid = layoutFor(size.width.value, heightDp, data.buttons.size, level)
+    Perf.mark(
+        "widget ${size.width.value.toInt()}x${heightDp.toInt()}dp $level " +
+            "${grid.columns}col ${grid.rows}fil ${grid.rowHeightDp.toInt()}dp/fila " +
+            "lista=${grid.showTodayList}"
+    )
 
     Column(
         modifier = GlanceModifier
@@ -164,13 +224,13 @@ private fun WidgetContent(
         }
 
         Spacer(GlanceModifier.height(8.dp))
-        QuickButtonGrid(data.buttons.take(visibleRows * columns), columns)
+        QuickButtonGrid(data.buttons.take(grid.rows * grid.columns), grid)
 
         // Kept directly under the grid: when the day list grew it used to push
         // "Deshacer" off the bottom of a tall widget.
         ActionRow()
 
-        if (level == WidgetLevel.FULL) {
+        if (grid.showTodayList) {
             Spacer(GlanceModifier.height(8.dp))
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
         }
@@ -294,18 +354,22 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
 }
 
 @Composable
-private fun QuickButtonGrid(buttons: List<QuickButton>, columns: Int) {
-    buttons.chunked(columns).forEach { row ->
+private fun QuickButtonGrid(buttons: List<QuickButton>, grid: GridLayout) {
+    buttons.chunked(grid.columns).forEach { row ->
         Row(modifier = GlanceModifier.fillMaxWidth()) {
             row.forEach { button ->
-                QuickButtonCell(button, GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(6.dp))
+                QuickButtonCell(
+                    button = button,
+                    grid = grid,
+                    modifier = GlanceModifier.defaultWeight(),
+                )
+                Spacer(GlanceModifier.width(BUTTON_GAP_DP.dp))
             }
-            repeat(columns - row.size) {
+            repeat(grid.columns - row.size) {
                 Spacer(GlanceModifier.defaultWeight())
             }
         }
-        Spacer(GlanceModifier.height(6.dp))
+        Spacer(GlanceModifier.height(BUTTON_GAP_DP.dp))
     }
 }
 
@@ -372,7 +436,7 @@ private fun ActionRow() {
 }
 
 @Composable
-private fun QuickButtonCell(button: QuickButton, modifier: GlanceModifier) {
+private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: GlanceModifier) {
     val amountLabel = button.fixedAmountCents
         ?.let { Money.formatShort(it) }
         ?: "…"
@@ -391,18 +455,20 @@ private fun QuickButtonCell(button: QuickButton, modifier: GlanceModifier) {
     }
     Column(
         modifier = modifier
+            .height(grid.rowHeightDp.dp)
             .background(WidgetColors.key)
             .cornerRadius(14.dp)
-            .padding(horizontal = 4.dp, vertical = 8.dp)
+            .padding(horizontal = 4.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = button.emoji + " " + button.label,
             maxLines = 1,
             style = TextStyle(
                 color = WidgetColors.onDark,
-                fontSize = 12.sp,
+                fontSize = grid.labelSp.sp,
                 textAlign = TextAlign.Center,
             ),
         )
@@ -411,7 +477,7 @@ private fun QuickButtonCell(button: QuickButton, modifier: GlanceModifier) {
             maxLines = 1,
             style = TextStyle(
                 color = WidgetColors.accent,
-                fontSize = 16.sp,
+                fontSize = grid.amountSp.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             ),

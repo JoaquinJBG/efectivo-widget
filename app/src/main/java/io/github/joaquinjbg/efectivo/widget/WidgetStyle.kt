@@ -45,7 +45,7 @@ object WidgetStyle {
     // ─── ESPACIADO GENERAL ──────────────────────────────────────────────
 
     /** Margen entre el borde del widget y su contenido. */
-    const val OUTER_PADDING = 10f
+    const val OUTER_PADDING = 1f
 
     /** Separación entre botones, y entre bandas (cabecera, totales, etc.). */
     const val GAP = 12f

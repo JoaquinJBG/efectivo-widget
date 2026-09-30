@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoryDao {
-    @Query("SELECT * FROM categories ORDER BY sortOrder, name")
+    @Query("SELECT * FROM categories WHERE archived = 0 ORDER BY sortOrder, name")
     fun observeAll(): Flow<List<Category>>
 
-    @Query("SELECT * FROM categories ORDER BY sortOrder, name")
+    @Query("SELECT * FROM categories WHERE archived = 0 ORDER BY sortOrder, name")
     suspend fun getAll(): List<Category>
 
     @Query("SELECT COUNT(*) FROM categories")
@@ -20,6 +20,21 @@ interface CategoryDao {
 
     @Insert
     suspend fun insertAll(categories: List<Category>): List<Long>
+
+    @Insert
+    suspend fun insert(category: Category): Long
+
+    @Update
+    suspend fun update(category: Category)
+
+    @Query("SELECT * FROM categories WHERE id = :id")
+    suspend fun getById(id: Long): Category?
+
+    @Query("UPDATE categories SET archived = 1 WHERE id = :id")
+    suspend fun archive(id: Long)
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM categories")
+    suspend fun nextSortOrder(): Int
 }
 
 @Dao
@@ -190,4 +205,11 @@ interface QuickButtonDao {
 
     @Query("DELETE FROM quick_buttons WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    /** Otros botones normales que comparten esta categoría. */
+    @Query(
+        "SELECT COUNT(*) FROM quick_buttons " +
+            "WHERE categoryId = :categoryId AND compact = 0 AND id != :exceptId"
+    )
+    suspend fun countSharingCategory(categoryId: Long, exceptId: Long): Int
 }

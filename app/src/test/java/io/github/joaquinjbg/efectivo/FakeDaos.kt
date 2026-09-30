@@ -46,11 +46,13 @@ class FakeStore {
 }
 
 class FakeCategoryDao(private val store: FakeStore) : CategoryDao {
-    override fun observeAll(): Flow<List<Category>> =
-        store.categories.map { list -> list.sortedWith(compareBy({ it.sortOrder }, { it.name })) }
+    override fun observeAll(): Flow<List<Category>> = store.categories.map { list ->
+        list.filterNot { it.archived }.sortedWith(compareBy({ it.sortOrder }, { it.name }))
+    }
 
-    override suspend fun getAll(): List<Category> =
-        store.categories.value.sortedWith(compareBy({ it.sortOrder }, { it.name }))
+    override suspend fun getAll(): List<Category> = store.categories.value
+        .filterNot { it.archived }
+        .sortedWith(compareBy({ it.sortOrder }, { it.name }))
 
     override suspend fun count(): Int = store.categories.value.size
 
@@ -59,6 +61,28 @@ class FakeCategoryDao(private val store: FakeStore) : CategoryDao {
         store.categories.value = store.categories.value + inserted
         return inserted.map { it.id }
     }
+
+    override suspend fun insert(category: Category): Long {
+        val row = category.copy(id = store.nextId++)
+        store.categories.value = store.categories.value + row
+        return row.id
+    }
+
+    override suspend fun update(category: Category) {
+        store.categories.value =
+            store.categories.value.map { if (it.id == category.id) category else it }
+    }
+
+    override suspend fun getById(id: Long): Category? =
+        store.categories.value.find { it.id == id }
+
+    override suspend fun archive(id: Long) {
+        store.categories.value =
+            store.categories.value.map { if (it.id == id) it.copy(archived = true) else it }
+    }
+
+    override suspend fun nextSortOrder(): Int =
+        (store.categories.value.maxOfOrNull { it.sortOrder } ?: -1) + 1
 }
 
 class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
@@ -207,4 +231,9 @@ class FakeQuickButtonDao(private val store: FakeStore) : QuickButtonDao {
     override suspend fun deleteById(id: Long) {
         store.quickButtons.value = store.quickButtons.value.filterNot { it.id == id }
     }
+
+    override suspend fun countSharingCategory(categoryId: Long, exceptId: Long): Int =
+        store.quickButtons.value.count {
+            it.categoryId == categoryId && !it.compact && it.id != exceptId
+        }
 }

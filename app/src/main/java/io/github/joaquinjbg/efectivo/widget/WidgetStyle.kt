@@ -42,6 +42,12 @@ object WidgetStyle {
     /** Texto secundario: "Efectivo", "Hoy", "Semana", "Mes". */
     val muted = ColorProvider(Color(0xFF9A9AA6))
 
+    /** La ✕ de borrar del historial. */
+    val danger = ColorProvider(Color(0xFFFF5C5C))
+
+    /** La nota de un gasto, bajo su categoría: más apagada para distinguirlas. */
+    val noteText = ColorProvider(Color(0xFF7E7E8A))
+
     // ─── ESPACIADO GENERAL ──────────────────────────────────────────────
 
     /** Margen entre el borde del widget y su contenido. */
@@ -77,10 +83,7 @@ object WidgetStyle {
     /** Entre los botones de moneda. */
     const val COIN_GAP = 8f
 
-    /** Entre "Otro…" y "Deshacer". */
-    const val ACTION_GAP = 10f
-
-    /** Entre la fila de acciones y el historial del día. */
+    /** Entre los botones y el historial del día. */
     const val HISTORY_TOP_GAP = 10f
 
     // ─── CABECERA (Efectivo / Hoy) ──────────────────────────────────────
@@ -148,25 +151,21 @@ object WidgetStyle {
     /** false = "1€" pegado; true = "1 €" con espacio. Solo afecta a estos botones. */
     const val COIN_SPACE_BEFORE_EURO = false
 
-    // ─── FILA DE ACCIONES (Otro… / Deshacer) ────────────────────────────
-
-    const val ACTION_HEIGHT = 48f
-    const val ACTION_TEXT_SP = 15f
-    const val ACTION_CORNER = 14f
-
     // ─── HISTORIAL DEL DÍA ──────────────────────────────────────────────
 
     const val HISTORY_TEXT_SP = 13f
+
+    /** La nota va en segunda línea, más pequeña que la categoría. */
+    const val HISTORY_NOTE_SP = 11f
     const val HISTORY_ROW_PADDING = 5f
     const val HISTORY_CORNER = 14f
+
+    /** La ✕ de borrar: tamaño del aspa y hueco a su alrededor, que es la zona táctil. */
+    const val HISTORY_DELETE_SP = 16f
+    const val HISTORY_DELETE_PADDING_H = 12f
+    const val HISTORY_DELETE_PADDING_V = 4f
 
     /** Cuántos gastos como mucho; el resto se queda fuera. */
     const val HISTORY_MAX_ROWS = 20
 
-    // ─── AVISO DE LA CABECERA ("Café 2 €", "Deshecho: …") ───────────────
-
-    const val MESSAGE_TEXT_SP = 14f
-
-    /** Milisegundos que se queda el aviso antes de volver al saldo. */
-    const val MESSAGE_VISIBLE_MILLIS = 2_500L
 }

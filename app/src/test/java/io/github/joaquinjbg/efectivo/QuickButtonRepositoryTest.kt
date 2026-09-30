@@ -2,6 +2,7 @@ package io.github.joaquinjbg.efectivo
 
 import io.github.joaquinjbg.efectivo.data.Category
 import io.github.joaquinjbg.efectivo.data.ExpenseRepository
+import io.github.joaquinjbg.efectivo.data.ExpenseSource
 import io.github.joaquinjbg.efectivo.data.QuickButton
 import io.github.joaquinjbg.efectivo.data.Seed
 import kotlinx.coroutines.flow.first
@@ -45,6 +46,112 @@ class QuickButtonRepositoryTest {
                 )
             )
         }
+    }
+
+    @Test
+    fun `a normal button creates its own category`() = runTest {
+        val id = repository.addQuickButton(
+            QuickButton(label = "gym", emoji = "🏋️", categoryId = 0, fixedAmountCents = null, sortOrder = 0)
+        )
+
+        val button = repository.quickButtonById(id)!!
+        val category = repository.categories().first { it.id == button.categoryId }
+        assertEquals("gym", category.name)
+        assertEquals("🏋️", category.emoji)
+    }
+
+    @Test
+    fun `a coin button reuses the category it was given`() = runTest {
+        val id = repository.addQuickButton(
+            QuickButton(
+                label = "5 €",
+                emoji = "🪙",
+                categoryId = 2,
+                fixedAmountCents = 500,
+                sortOrder = 0,
+                compact = true,
+            )
+        )
+
+        // Si cada moneda creara su categoría, el resumen del mes se llenaría de importes.
+        assertEquals(2, repository.quickButtonById(id)!!.categoryId)
+        assertEquals(2, repository.categories().size)
+    }
+
+    @Test
+    fun `renaming a button renames its category`() = runTest {
+        val id = repository.addQuickButton(
+            QuickButton(label = "gym", emoji = "🏋️", categoryId = 0, fixedAmountCents = null, sortOrder = 0)
+        )
+        val button = repository.quickButtonById(id)!!
+
+        repository.updateQuickButton(button.copy(label = "gimnasio", emoji = "💪"))
+
+        val category = repository.categories().first { it.id == button.categoryId }
+        assertEquals("gimnasio", category.name)
+        assertEquals("💪", category.emoji)
+    }
+
+    @Test
+    fun `deleting a button keeps its past expenses in the history`() = runTest {
+        val id = repository.addQuickButton(
+            QuickButton(label = "gym", emoji = "🏋️", categoryId = 0, fixedAmountCents = 3000, sortOrder = 0)
+        )
+        val button = repository.quickButtonById(id)!!
+        repository.addExpense(3000, button.categoryId, null, ExpenseSource.WIDGET)
+
+        repository.deleteQuickButton(id)
+
+        // La categoría se archiva: deja de ofrecerse, pero el gasto conserva su nombre.
+        assertNull(repository.categories().find { it.id == button.categoryId })
+        val history = repository.observeAllExpenses().first()
+        assertEquals(1, history.size)
+        assertEquals("gym", history.first().categoryName)
+        assertEquals(3000L, history.first().amountCents)
+    }
+
+    @Test
+    fun `deleting a coin button leaves its shared category alone`() = runTest {
+        val id = repository.addQuickButton(
+            QuickButton(
+                label = "5 €",
+                emoji = "🪙",
+                categoryId = 2,
+                fixedAmountCents = 500,
+                sortOrder = 0,
+                compact = true,
+            )
+        )
+
+        repository.deleteQuickButton(id)
+
+        assertEquals(2, repository.categories().size)
+    }
+
+    @Test
+    fun `renaming a button that shares a category does not rename the other one`() = runTest {
+        // Situación real: un botón creado antes de esta regla apuntaba a Café, la misma
+        // categoría que el botón "Café". Renombrarlo arrastraría todos los cafés.
+        val cafeButton = repository.addQuickButton(
+            QuickButton(label = "Café", emoji = "☕", categoryId = 1, fixedAmountCents = 200, sortOrder = 0)
+        ).let { repository.quickButtonById(it)!! }
+        val strayButton = QuickButton(
+            id = repository.addQuickButton(
+                QuickButton(label = "gym", emoji = "🏋️", categoryId = 0, fixedAmountCents = null, sortOrder = 1)
+            ),
+            label = "gym",
+            emoji = "🏋️",
+            categoryId = cafeButton.categoryId,
+            fixedAmountCents = null,
+            sortOrder = 1,
+        )
+
+        repository.updateQuickButton(strayButton.copy(label = "gimnasio"))
+
+        val cafeCategory = repository.categories().first { it.id == cafeButton.categoryId }
+        assertEquals("Café", cafeCategory.name)
+        val moved = repository.quickButtonById(strayButton.id)!!
+        assertEquals("gimnasio", repository.categories().first { it.id == moved.categoryId }.name)
     }
 
     @Test

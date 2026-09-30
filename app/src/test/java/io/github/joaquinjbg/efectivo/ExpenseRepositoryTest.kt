@@ -73,71 +73,38 @@ class ExpenseRepositoryTest {
     }
 
     @Test
-    fun `undo removes only the latest expense`() = runTest {
+    fun `deleting one expense leaves the rest alone`() = runTest {
         val today = LocalDate.of(2026, 9, 29)
-        repository.addExpense(200, cafe, null, ExpenseSource.WIDGET, at(today, 9))
-        repository.addExpense(500, ocio, null, ExpenseSource.WIDGET, at(today, 10))
-        val newest = repository.addExpense(5000, gasoil, null, ExpenseSource.APP, at(today, 11))
+        val first = repository.addExpense(200, cafe, null, ExpenseSource.WIDGET, at(today, 9))
+        val middle = repository.addExpense(500, ocio, null, ExpenseSource.WIDGET, at(today, 10))
+        repository.addExpense(5000, gasoil, null, ExpenseSource.APP, at(today, 11))
 
-        val undone = repository.undoLastExpense()
+        // The widget deletes by row, so any of them can go, not just the newest.
+        repository.deleteExpense(middle)
 
-        assertEquals(newest, undone?.id)
-        assertEquals(5000L, undone?.amountCents)
-        assertEquals("Gasoil", undone?.categoryName)
         val remaining = repository.observeAllExpenses().first()
         assertEquals(2, remaining.size)
-        assertEquals(listOf(500L, 200L), remaining.map { it.amountCents })
+        assertEquals(listOf(5000L, 200L), remaining.map { it.amountCents })
+        assertEquals(first, remaining.last().id)
     }
 
     @Test
-    fun `undo on an empty ledger returns null and changes nothing`() = runTest {
+    fun `deleting an id that is not there changes nothing`() = runTest {
         repository.addCash(5000)
 
-        assertNull(repository.undoLastExpense())
+        repository.deleteExpense(9999)
+
         assertEquals(5000L, repository.balance())
     }
 
     @Test
-    fun `undo does not touch cash movements`() = runTest {
-        repository.addExpense(300, cafe, null, ExpenseSource.WIDGET)
+    fun `deleting an expense does not touch cash movements`() = runTest {
+        val expense = repository.addExpense(300, cafe, null, ExpenseSource.WIDGET)
         repository.addCash(10000)
 
-        val undone = repository.undoLastExpense()
+        repository.deleteExpense(expense)
 
-        assertEquals(300L, undone?.amountCents)
         assertEquals(10000L, repository.balance())
-    }
-
-    @Test
-    fun `undo stages the header message before deleting and notifying`() = runTest {
-        val events = mutableListOf<String>()
-        val repo = ExpenseRepository(
-            expenseDao = FakeExpenseDao(store),
-            cashDao = FakeCashDao(store),
-            categoryDao = FakeCategoryDao(store),
-            quickButtonDao = FakeQuickButtonDao(store),
-            zone = zone,
-            onChanged = { events += "refresh" },
-        )
-        repo.addExpense(200, cafe, null, ExpenseSource.WIDGET)
-        events.clear()
-
-        repo.undoLastExpense { latest -> events += "message:" + latest.categoryName }
-
-        // The message must be staged first, so the single refresh paints it together
-        // with the new balance.
-        assertEquals(listOf("message:Café", "refresh"), events)
-        assertEquals(0, repo.observeAllExpenses().first().size)
-    }
-
-    @Test
-    fun `undo skips the hook when there is nothing to delete`() = runTest {
-        var hookCalls = 0
-
-        val undone = repository.undoLastExpense { hookCalls++ }
-
-        assertNull(undone)
-        assertEquals(0, hookCalls)
     }
 
     @Test
@@ -264,9 +231,9 @@ class ExpenseRepositoryTest {
             onChanged = { notifications++ },
         )
 
-        repo.addExpense(100, cafe, null, ExpenseSource.WIDGET)
+        val expense = repo.addExpense(100, cafe, null, ExpenseSource.WIDGET)
         repo.addCash(1000)
-        repo.undoLastExpense()
+        repo.deleteExpense(expense)
 
         assertEquals(3, notifications)
     }

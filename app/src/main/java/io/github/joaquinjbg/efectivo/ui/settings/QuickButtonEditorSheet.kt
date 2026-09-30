@@ -63,7 +63,7 @@ fun QuickButtonEditorSheet(
     val cents = input.cents
     val canSave = label.isNotBlank() &&
         emoji.isNotBlank() &&
-        categoryId != null &&
+        (!compact || categoryId != null) &&
         (askAmount || (cents != null && cents > 0L))
 
     ModalBottomSheet(
@@ -101,12 +101,23 @@ fun QuickButtonEditorSheet(
                 )
             }
 
-            Text("Categoría", style = MaterialTheme.typography.bodyMedium)
-            CategoryChips(
-                categories = categories,
-                selectedId = categoryId,
-                onSelect = { categoryId = it },
-            )
+            if (compact) {
+                // Las monedas comparten categoría; si cada una tuviera la suya, el
+                // resumen del mes se llenaría de "1 €", "2 €"...
+                Text("Categoría", style = MaterialTheme.typography.bodyMedium)
+                CategoryChips(
+                    categories = categories,
+                    selectedId = categoryId,
+                    onSelect = { categoryId = it },
+                )
+            } else {
+                Text(
+                    "La etiqueta es la categoría: los gastos de este botón se " +
+                        "apuntarán como \"" + label.trim().ifBlank { "…" } + "\".",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             Row(
                 Modifier.fillMaxWidth().height(56.dp),
@@ -142,7 +153,9 @@ fun QuickButtonEditorSheet(
                 text = "Guardar",
                 enabled = canSave,
                 onClick = {
-                    val category = categoryId ?: return@BigButton
+                    // Para un botón normal el repositorio crea o renombra su categoría,
+                    // así que este valor solo cuenta para las monedas.
+                    val category = categoryId ?: 0L
                     onSave(
                         QuickButton(
                             id = button?.id ?: 0L,

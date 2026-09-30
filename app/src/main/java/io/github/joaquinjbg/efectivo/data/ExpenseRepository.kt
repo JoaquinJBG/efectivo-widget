@@ -185,38 +185,63 @@ class ExpenseRepository(
         return id
     }
 
-    /**
-     * Deletes the most recent expense and returns it, or null when there is nothing to undo.
-     *
-     * [beforeDelete] runs with the row that is about to go, before [onChanged] fires. The
-     * widget uses it to stage its header message so the single refresh that follows paints
-     * the new balance and the message together.
-     */
-    suspend fun undoLastExpense(
-        beforeDelete: suspend (ExpenseWithCategory) -> Unit = {},
-    ): ExpenseWithCategory? {
-        val latest = expenseDao.latestWithCategory() ?: return null
-        beforeDelete(latest)
-        expenseDao.deleteById(latest.id)
-        onChanged()
-        return latest
-    }
-
     // ---- quick buttons ----
 
+    /**
+     * Un botón normal ES su categoría: al crearlo se crea, al renombrarlo se renombra y
+     * al borrarlo se archiva. Los botones de moneda quedan fuera de esa regla — si cada
+     * uno tuviera la suya, el resumen del mes se llenaría de "1 €", "2 €", "5 €" en vez
+     * de agruparlos — y siguen apuntando a una categoría que se elige.
+     */
     suspend fun addQuickButton(button: QuickButton): Long {
-        val id = quickButtonDao.insert(button)
+        val categoryId = if (button.compact) {
+            button.categoryId
+        } else {
+            categoryDao.insert(
+                Category(
+                    name = button.label,
+                    emoji = button.emoji,
+                    sortOrder = categoryDao.nextSortOrder(),
+                )
+            )
+        }
+        val id = quickButtonDao.insert(button.copy(categoryId = categoryId))
         onChanged()
         return id
     }
 
     suspend fun updateQuickButton(button: QuickButton) {
+        if (!button.compact) {
+            val category = categoryDao.getById(button.categoryId)
+            // Si la categoría no existe, o la comparte con otro botón, hay que darle una
+            // propia: renombrar una compartida arrastraría los gastos de ese otro botón.
+            val shared = quickButtonDao.countSharingCategory(button.categoryId, button.id) > 0
+            if (category == null || shared) {
+                val categoryId = categoryDao.insert(
+                    Category(
+                        name = button.label,
+                        emoji = button.emoji,
+                        sortOrder = categoryDao.nextSortOrder(),
+                    )
+                )
+                quickButtonDao.update(button.copy(categoryId = categoryId))
+                onChanged()
+                return
+            }
+            categoryDao.update(category.copy(name = button.label, emoji = button.emoji))
+        }
         quickButtonDao.update(button)
         onChanged()
     }
 
     suspend fun deleteQuickButton(id: Long) {
+        val button = quickButtonDao.getById(id)
+        val shared = button != null &&
+            quickButtonDao.countSharingCategory(button.categoryId, id) > 0
         quickButtonDao.deleteById(id)
+        // Archivar, no borrar: los gastos que ya tenía deben seguir viéndose con su nombre.
+        // Si otro botón usa la misma categoría, se queda como está.
+        if (button != null && !button.compact && !shared) categoryDao.archive(button.categoryId)
         onChanged()
     }
 

@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "env": {
+      "JAVA_HOME": "C:\\Program Files\\Eclipse Adoptium\\jdk-17.0.20.101-hotspot",
+      "ANDROID_HOME": "${env:USERPROFILE}\\Android\\Sdk"
+    }
+  },
+  "tasks": [
+    {
+      "label": "Compilar e instalar en el móvil",
+      "detail": "Atajo: Ctrl+Shift+B",
+      "type": "shell",
+      "command": "./gradlew assembleDebug; if ($?) { powershell -ExecutionPolicy Bypass -File scripts/instalar.ps1 }",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Solo compilar",
+      "type": "shell",
+      "command": "./gradlew assembleDebug",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Solo instalar",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/instalar.ps1",
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests",
+      "type": "shell",
+      "command": "./gradlew testDebugUnitTest",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Ver móviles conectados",
+      "detail": "Si adb no ve el móvil. El puerto del Wi-Fi cambia al reiniciarlo.",
+      "type": "shell",
+      "command": "& \"$env:ANDROID_HOME\\platform-tools\\adb.exe\" devices -l; & \"$env:ANDROID_HOME\\platform-tools\\adb.exe\" mdns services",
+      "problemMatcher": []
+    }
+  ]
+}

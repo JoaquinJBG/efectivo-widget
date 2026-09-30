@@ -25,7 +25,6 @@ import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
-import androidx.glance.layout.ColumnScope
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
@@ -38,7 +37,6 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import io.github.joaquinjbg.efectivo.Graph
 import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
 import io.github.joaquinjbg.efectivo.data.QuickButton
@@ -51,106 +49,103 @@ import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import java.time.YearMonth
 
-/** Newer rows are pushed off the widget rather than building an unbounded RemoteViews tree. */
-private const val MAX_TODAY_ROWS = 20
-
-/**
- * How much the widget shows, decided from its real height.
+/*
+ * Layout, top to bottom:
  *
- * Roughly: up to 3 launcher rows [COMPACT], 4 rows [LARGE], 5 or more [FULL].
+ *   [ Efectivo 90 ]        [ Hoy 42 ]      two separate cards
+ *   [ Semana 68        Mes 490       ]     one wide card
+ *   [ ☕  ] [ 🥐  ] [ ⛽  ] [ 🎉  ]        square category tiles
+ *   [ 1 ][ 2 ][ 5 ][ 10 ][ 20 ][ 50 ]      small coin buttons, own row
+ *   [   Otro…    ] [   Deshacer      ]
+ *   [ historial del día                ]   takes whatever is left
+ *
+ * Two hard constraints shape this file:
+ *  - Glance only ships container layouts for up to 10 children and drops the rest in
+ *    silence, so each band lives in its own nested container.
+ *  - RemoteViews cannot measure itself, so the sizes below are estimates in dp.
  */
-private enum class WidgetLevel { COMPACT, LARGE, FULL }
 
-// Rough heights used to share out the space. RemoteViews cannot measure itself,
-// so these are estimates of what each block costs once drawn.
-private const val MIN_COLUMNS = 2
-private const val MAX_COLUMNS = 6
-
-/** Wide enough that "Desayuno" and "50 €" are not cut off. */
-private const val BUTTON_MIN_WIDTH_DP = 84f
-private const val BUTTON_GAP_DP = 10f
-private const val WIDGET_PADDING_DP = 20f
-private const val HEADER_COMPACT_DP = 22f
-private const val HEADER_FULL_DP = 46f
-private const val TOTALS_ROW_DP = 40f
-private const val ACTION_ROW_DP = 46f
-private const val TODAY_LIST_MIN_DP = 60f
-private const val VERTICAL_SLACK_DP = 28f
-
-/** A button row never shrinks below this, and never grows past it. */
-private const val BUTTON_ROW_MIN_DP = 52f
-private const val BUTTON_ROW_MAX_DP = 76f
-
-/** Height a row wants before the leftover space is offered to the day list. */
-private const val BUTTON_ROW_COMFORTABLE_DP = 76f
-
-private fun levelFor(heightDp: Float): WidgetLevel = when {
-    heightDp >= 420f -> WidgetLevel.FULL
-    heightDp >= 290f -> WidgetLevel.LARGE
-    else -> WidgetLevel.COMPACT
-}
-
-/** How the button grid is laid out once the surrounding chrome has taken its share. */
-private data class GridLayout(
-    val columns: Int,
-    val rows: Int,
-    val rowHeightDp: Float,
-    val gridHeightDp: Float,
+private data class WidgetLayout(
+    val compact: Boolean,
+    val categoryColumns: Int,
+    val categoryRows: Int,
+    val categorySideDp: Float,
+    val coinColumns: Int,
+    val coinRows: Int,
     val showTodayList: Boolean,
 ) {
-    /** Type scales with the buttons, so a tall widget reads from further away. */
-    val labelSp: Float get() = when {
-        rowHeightDp >= 110f -> 16f
-        rowHeightDp >= 90f -> 15f
-        rowHeightDp >= 68f -> 13f
-        else -> 11f
-    }
+    val categoryLabelSp: Float
+        get() = if (categorySideDp >= WidgetStyle.CATEGORY_SMALL_BELOW) {
+            WidgetStyle.CATEGORY_LABEL_SP
+        } else {
+            WidgetStyle.CATEGORY_LABEL_SMALL_SP
+        }
 
-    val amountSp: Float get() = when {
-        rowHeightDp >= 110f -> 24f
-        rowHeightDp >= 90f -> 21f
-        rowHeightDp >= 68f -> 18f
-        else -> 15f
-    }
+    val categoryAmountSp: Float
+        get() = if (categorySideDp >= WidgetStyle.CATEGORY_SMALL_BELOW) {
+            WidgetStyle.CATEGORY_AMOUNT_SP
+        } else {
+            WidgetStyle.CATEGORY_AMOUNT_SMALL_SP
+        }
 }
+
+private const val MIN_COLUMNS = 2
+private const val MAX_CATEGORY_COLUMNS = 6
+private const val MAX_COIN_COLUMNS = 8
+
+private fun columnsFor(usableWidth: Float, minWidth: Float, max: Int): Int =
+    ((usableWidth + WidgetStyle.GAP) / (minWidth + WidgetStyle.GAP)).toInt().coerceIn(MIN_COLUMNS, max)
 
 private fun layoutFor(
     widthDp: Float,
     heightDp: Float,
-    buttonCount: Int,
-    level: WidgetLevel,
-): GridLayout {
-    val usableWidth = widthDp - WIDGET_PADDING_DP
-    val columns = ((usableWidth + BUTTON_GAP_DP) / (BUTTON_MIN_WIDTH_DP + BUTTON_GAP_DP))
-        .toInt()
-        .coerceIn(MIN_COLUMNS, MAX_COLUMNS)
+    categoryCount: Int,
+    coinCount: Int,
+): WidgetLayout {
+    val compact = heightDp < WidgetStyle.COMPACT_BELOW
+    val usableWidth = (widthDp - WidgetStyle.OUTER_PADDING).coerceAtLeast(WidgetStyle.CATEGORY_MIN_WIDTH)
 
-    val chrome = (if (level == WidgetLevel.COMPACT) HEADER_COMPACT_DP else HEADER_FULL_DP) +
-        (if (level == WidgetLevel.COMPACT) 0f else TOTALS_ROW_DP) +
-        ACTION_ROW_DP +
-        VERTICAL_SLACK_DP
-    val forGrid = (heightDp - chrome).coerceAtLeast(BUTTON_ROW_MIN_DP)
+    // Four across is the shape the layout is drawn for; narrow widgets get fewer.
+    val categoryColumns = columnsFor(usableWidth, WidgetStyle.CATEGORY_MIN_WIDTH, MAX_CATEGORY_COLUMNS)
+        .coerceAtMost(WidgetStyle.CATEGORY_COLUMNS)
+    // Coins fill their row rather than leaving gaps at the end.
+    val coinColumns = columnsFor(usableWidth, WidgetStyle.COIN_MIN_WIDTH, MAX_COIN_COLUMNS)
+        .coerceAtMost(maxOf(1, coinCount))
 
-    val wantedRows = if (buttonCount == 0) 1 else (buttonCount + columns - 1) / columns
-    val fittingRows = maxOf(1, (forGrid / BUTTON_ROW_MIN_DP).toInt())
-    val rows = minOf(wantedRows, fittingRows)
+    // A square tile: the side comes from the column width, then gets clamped.
+    val cellWidth = (usableWidth - (categoryColumns - 1) * WidgetStyle.GAP) / categoryColumns
+    val side = cellWidth.coerceIn(WidgetStyle.CATEGORY_HEIGHT_MIN, WidgetStyle.CATEGORY_HEIGHT_MAX)
 
-    // Rows are capped: a tall widget should not blow the buttons up into mostly padding.
-    val rowHeight = (forGrid / rows).coerceIn(BUTTON_ROW_MIN_DP, BUTTON_ROW_MAX_DP)
-    val gridHeight = rows * rowHeight
-    val showTodayList = level != WidgetLevel.COMPACT &&
-        forGrid - gridHeight >= TODAY_LIST_MIN_DP
+    val coinRows = if (coinCount == 0) 0 else (coinCount + coinColumns - 1) / coinColumns
+    val coinBand = if (coinRows == 0) 0f else coinRows * (WidgetStyle.COIN_HEIGHT + WidgetStyle.GAP)
 
-    return GridLayout(columns, rows, rowHeight, gridHeight, showTodayList)
+    val chrome = (if (compact) WidgetStyle.HEADER_COMPACT_HEIGHT else WidgetStyle.HEADER_HEIGHT + WidgetStyle.TOTALS_HEIGHT) +
+        WidgetStyle.ACTION_HEIGHT + WidgetStyle.GAP + coinBand
+    val forCategories = (heightDp - chrome).coerceAtLeast(0f)
+
+    val wantedRows = if (categoryCount == 0) 0 else (categoryCount + categoryColumns - 1) / categoryColumns
+    val fittingRows = (forCategories / (side + WidgetStyle.GAP)).toInt()
+    val categoryRows = minOf(wantedRows, maxOf(if (categoryCount == 0) 0 else 1, fittingRows))
+
+    val categoryBand = categoryRows * (side + WidgetStyle.GAP)
+    val showTodayList = !compact
+
+    return WidgetLayout(
+        compact = compact,
+        categoryColumns = categoryColumns,
+        categoryRows = categoryRows,
+        categorySideDp = side,
+        coinColumns = coinColumns,
+        coinRows = coinRows,
+        showTodayList = showTodayList,
+    )
 }
 
 object EfectivoWidget : GlanceAppWidget() {
 
     /**
-     * Exact, not Responsive. Responsive makes the launcher pick from a list of declared
-     * sizes, and this one kept choosing a much smaller one than the actual slot — a
-     * 240x180 layout stretched across 333x700, so two giant buttons and no totals row.
-     * Exact lays out for the real size, so any width the user drags to just works.
+     * Exact, not Responsive: Responsive makes the launcher pick from declared sizes and
+     * this one kept choosing far smaller than the real slot.
      */
     override val sizeMode: SizeMode = SizeMode.Exact
 
@@ -159,17 +154,13 @@ object EfectivoWidget : GlanceAppWidget() {
         val repository = Graph.repository(context)
         val today = LocalDate.now()
         val month = YearMonth.from(today)
-        Perf.step("provideGlance: repositorio listo", t0)
 
-        // Two subscriptions, not five: all four totals come from one SQL round trip.
         val data = combine(
             repository.observeWidgetTotals(today, month),
             repository.observeEnabledQuickButtons(),
         ) { totals, buttons -> WidgetData(totals, buttons) }
         val todayExpenses = repository.observeExpensesOn(today)
 
-        // Seeded so the first frame shows real numbers instead of zeros. The day list is
-        // not seeded: it only appears on the largest size and costs a query every redraw.
         val initial = WidgetData(
             totals = repository.widgetTotals(today, month),
             buttons = repository.enabledQuickButtons(),
@@ -177,7 +168,6 @@ object EfectivoWidget : GlanceAppWidget() {
         Perf.step("provideGlance: consultas iniciales", t0)
 
         provideContent {
-            Perf.step("provideGlance: composicion", t0)
             val state by data.collectAsState(initial = initial)
             val expenses by todayExpenses.collectAsState(initial = emptyList())
             WidgetContent(
@@ -193,10 +183,8 @@ private data class WidgetData(
     val totals: WidgetTotals = WidgetTotals(0L, 0L, 0L, 0L),
     val buttons: List<QuickButton> = emptyList(),
 ) {
-    val balanceCents: Long get() = totals.balanceCents
-    val todayCents: Long get() = totals.todayCents
-    val weekCents: Long get() = totals.weekCents
-    val monthCents: Long get() = totals.monthCents
+    val categories: List<QuickButton> get() = buttons.filterNot { it.compact }
+    val coins: List<QuickButton> get() = buttons.filter { it.compact }
 }
 
 @Composable
@@ -206,64 +194,67 @@ private fun WidgetContent(
     message: String?,
 ) {
     val size = LocalSize.current
-    val heightDp = size.height.value
-    val level = levelFor(heightDp)
-    val compact = level == WidgetLevel.COMPACT
-    val grid = layoutFor(size.width.value, heightDp, data.buttons.size, level)
+    val layout = layoutFor(
+        widthDp = size.width.value,
+        heightDp = size.height.value,
+        categoryCount = data.categories.size,
+        coinCount = data.coins.size,
+    )
     Perf.mark(
-        "widget ${size.width.value.toInt()}x${heightDp.toInt()}dp $level " +
-            "${grid.columns}col ${grid.rows}fil ${grid.rowHeightDp.toInt()}dp/fila " +
-            "lista=${grid.showTodayList}"
+        "widget ${size.width.value.toInt()}x${size.height.value.toInt()}dp " +
+            "cat=${layout.categoryColumns}x${layout.categoryRows}@${layout.categorySideDp.toInt()}dp " +
+            "monedas=${layout.coinColumns}x${layout.coinRows} lista=${layout.showTodayList}"
     )
 
-    // Glance only ships container layouts for up to 10 children, and silently drops the
-    // rest. Keep this Column to at most 4 direct children and nest the grid inside its own.
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(WidgetColors.background)
-            .cornerRadius(20.dp)
-            .padding(10.dp),
+            .background(WidgetStyle.background)
+            .cornerRadius(WidgetStyle.WIDGET_CORNER.dp)
+            .padding(WidgetStyle.OUTER_PADDING.dp),
     ) {
-        Header(data, message, compact = compact)
+        Header(data, message, layout.compact)
 
-        if (!compact) {
+        if (!layout.compact) {
             TotalsRow(data)
         }
 
-        QuickButtonGrid(
-            buttons = data.buttons.take(grid.rows * grid.columns),
-            grid = grid,
-            modifier = GlanceModifier.height(grid.gridHeightDp.dp),
+        CategoryGrid(
+            buttons = data.categories.take(layout.categoryRows * layout.categoryColumns),
+            layout = layout,
         )
 
-        // Directly under the grid so a growing day list cannot push it out of view.
+        CoinRow(data.coins, layout)
+
         ActionRow()
 
-        if (grid.showTodayList) {
+        if (!layout.compact) {
             TodayList(todayExpenses, GlanceModifier.defaultWeight())
         }
     }
 }
 
-/** Tapping the header opens the app. */
+/** Two separate cards: balance on the left, today's spend on the right. Opens the app. */
 @Composable
 private fun Header(data: WidgetData, message: String?, compact: Boolean) {
     val context = LocalContext.current
     val openApp = GlanceModifier.clickable(
         actionStartActivity(
-            Intent(context, MainActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     )
 
     if (message != null) {
         Text(
             text = message,
-            modifier = GlanceModifier.fillMaxWidth().then(openApp),
+            maxLines = 1,
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(bottom = WidgetStyle.GAP.dp)
+                .then(openApp),
             style = TextStyle(
-                color = WidgetColors.accent,
-                fontSize = 13.sp,
+                color = WidgetStyle.accent,
+                fontSize = WidgetStyle.MESSAGE_TEXT_SP.sp,
                 fontWeight = FontWeight.Medium,
             ),
         )
@@ -271,92 +262,68 @@ private fun Header(data: WidgetData, message: String?, compact: Boolean) {
     }
 
     if (compact) {
-        // One thin line: balance on the left, today's spend on the right.
         Row(
-            modifier = GlanceModifier.fillMaxWidth().then(openApp),
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .padding(bottom = WidgetStyle.GAP.dp)
+                .then(openApp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = Money.format(data.balanceCents),
+                text = Money.format(data.totals.balanceCents),
                 modifier = GlanceModifier.defaultWeight(),
                 style = TextStyle(
-                    color = WidgetColors.onDark,
-                    fontSize = 16.sp,
+                    color = WidgetStyle.onDark,
+                    fontSize = WidgetStyle.TOTALS_AMOUNT_SP.sp,
                     fontWeight = FontWeight.Bold,
                 ),
             )
             Text(
-                text = "hoy " + Money.format(data.todayCents),
-                style = TextStyle(color = WidgetColors.muted, fontSize = 13.sp),
+                text = "hoy " + Money.format(data.totals.todayCents),
+                style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
             )
         }
         return
     }
 
     Row(
-        modifier = GlanceModifier.fillMaxWidth().then(openApp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = "Efectivo",
-                style = TextStyle(color = WidgetColors.muted, fontSize = 11.sp),
-            )
-            Text(
-                text = Money.format(data.balanceCents),
-                style = TextStyle(
-                    color = WidgetColors.onDark,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text = "Hoy",
-                style = TextStyle(color = WidgetColors.muted, fontSize = 11.sp),
-            )
-            Text(
-                text = Money.format(data.todayCents),
-                style = TextStyle(
-                    color = WidgetColors.onDark,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun TotalsRow(data: WidgetData) {
-    Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 8.dp)
-            .background(WidgetColors.key)
-            .cornerRadius(12.dp)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(bottom = WidgetStyle.HEADER_BOTTOM_GAP.dp)
+            .then(openApp),
     ) {
-        TotalCell("Semana", data.weekCents, GlanceModifier.defaultWeight())
-        TotalCell("Mes", data.monthCents, GlanceModifier.defaultWeight())
+        HeaderCard(
+            label = "Efectivo",
+            value = Money.format(data.totals.balanceCents),
+            modifier = GlanceModifier.defaultWeight(),
+        )
+        Spacer(GlanceModifier.width(WidgetStyle.HEADER_GAP.dp))
+        HeaderCard(
+            label = "Hoy",
+            value = Money.format(data.totals.todayCents),
+            modifier = GlanceModifier.defaultWeight(),
+        )
     }
 }
 
 @Composable
-private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+private fun HeaderCard(label: String, value: String, modifier: GlanceModifier) {
+    Column(
+        modifier = modifier
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
+            .padding(
+                horizontal = WidgetStyle.CARD_PADDING_H.dp,
+                vertical = WidgetStyle.CARD_PADDING_V.dp,
+            ),
+    ) {
+        Text(label, style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HEADER_LABEL_SP.sp))
         Text(
-            text = label,
-            style = TextStyle(color = WidgetColors.muted, fontSize = 12.sp),
-        )
-        Spacer(GlanceModifier.width(6.dp))
-        Text(
-            text = Money.format(cents),
+            text = value,
+            maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
-                fontSize = 14.sp,
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.HEADER_AMOUNT_SP.sp,
                 fontWeight = FontWeight.Bold,
             ),
         )
@@ -364,32 +331,77 @@ private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
 }
 
 @Composable
-private fun QuickButtonGrid(
-    buttons: List<QuickButton>,
-    grid: GridLayout,
-    modifier: GlanceModifier,
-) {
-    // Own container, so the rows do not count against the root Column's 10-child budget.
-    // Each row uses defaultWeight rather than a fixed height: the declared size is only an
-    // estimate, so the rows share out whatever the launcher actually handed us.
-    Column(modifier = modifier.fillMaxWidth()) {
-        buttons.chunked(grid.columns).forEach { row ->
+private fun TotalsRow(data: WidgetData) {
+    // Dos tarjetas separadas, no una sola partida en dos: antes compartian fondo y
+    // por eso no habia forma de meter separacion entre "Semana" y "Mes".
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(bottom = WidgetStyle.TOTALS_BOTTOM_GAP.dp),
+    ) {
+        TotalCell(
+            label = "Semana",
+            cents = data.totals.weekCents,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+        Spacer(GlanceModifier.width(WidgetStyle.TOTALS_GAP.dp))
+        TotalCell(
+            label = "Mes",
+            cents = data.totals.monthCents,
+            modifier = GlanceModifier.defaultWeight(),
+        )
+    }
+}
+
+@Composable
+private fun TotalCell(label: String, cents: Long, modifier: GlanceModifier) {
+    Column(
+        modifier = modifier
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
+            .padding(
+                horizontal = WidgetStyle.CARD_PADDING_H.dp,
+                vertical = WidgetStyle.CARD_PADDING_V.dp,
+            ),
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.TOTALS_LABEL_SP.sp),
+        )
+        Text(
+            text = Money.format(cents),
+            maxLines = 1,
+            style = TextStyle(
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.TOTALS_AMOUNT_SP.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+        )
+    }
+}
+
+/** Square tiles, one per non-coin button. */
+@Composable
+private fun CategoryGrid(buttons: List<QuickButton>, layout: WidgetLayout) {
+    if (buttons.isEmpty()) return
+    Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = WidgetStyle.CATEGORY_GAP.dp)) {
+        buttons.chunked(layout.categoryColumns).forEachIndexed { rowIndex, row ->
+            if (rowIndex > 0) Spacer(GlanceModifier.height(WidgetStyle.CATEGORY_GAP.dp))
             Row(
                 modifier = GlanceModifier
                     .fillMaxWidth()
-                    .defaultWeight()
-                    .padding(bottom = BUTTON_GAP_DP.dp),
+                    .height(layout.categorySideDp.dp),
             ) {
                 row.forEachIndexed { index, button ->
-                    QuickButtonCell(
+                    if (index > 0) Spacer(GlanceModifier.width(WidgetStyle.CATEGORY_GAP.dp))
+                    CategoryTile(
                         button = button,
-                        grid = grid,
-                        modifier = GlanceModifier
-                            .defaultWeight()
-                            .padding(end = if (index < grid.columns - 1) BUTTON_GAP_DP.dp else 0.dp),
+                        layout = layout,
+                        modifier = GlanceModifier.defaultWeight(),
                     )
                 }
-                repeat(grid.columns - row.size) {
+                repeat(layout.categoryColumns - row.size) {
                     Spacer(GlanceModifier.defaultWeight())
                 }
             }
@@ -397,73 +409,8 @@ private fun QuickButtonGrid(
     }
 }
 
-/** Today's expenses, newest first: concept on the left, amount on the right. */
 @Composable
-private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModifier) {
-    if (expenses.isEmpty()) {
-        Text(
-            text = "Sin gastos hoy",
-            modifier = GlanceModifier.fillMaxWidth().padding(vertical = 8.dp),
-            style = TextStyle(color = WidgetColors.muted, fontSize = 13.sp),
-        )
-        return
-    }
-    LazyColumn(modifier = modifier.fillMaxWidth()) {
-        items(expenses.take(MAX_TODAY_ROWS), itemId = { it.id }) { expense ->
-            Row(
-                modifier = GlanceModifier.fillMaxWidth().padding(vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = expense.categoryEmoji + " " +
-                        (expense.note?.takeIf { it.isNotBlank() } ?: expense.categoryName),
-                    maxLines = 1,
-                    modifier = GlanceModifier.defaultWeight(),
-                    style = TextStyle(color = WidgetColors.onDark, fontSize = 13.sp),
-                )
-                Text(
-                    text = Money.format(expense.amountCents),
-                    maxLines = 1,
-                    style = TextStyle(
-                        color = WidgetColors.onDark,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionRow() {
-    val context = LocalContext.current
-    Row(modifier = GlanceModifier.fillMaxWidth()) {
-        ActionCell(
-            label = "Otro…",
-            modifier = GlanceModifier.defaultWeight(),
-            background = WidgetColors.key,
-            textColor = WidgetColors.onDark,
-            action = GlanceModifier.clickable(
-                actionStartActivity(QuickEntryActivity.intent(context, categoryId = null))
-            ),
-        )
-        Spacer(GlanceModifier.width(6.dp))
-        ActionCell(
-            label = "Deshacer",
-            modifier = GlanceModifier.defaultWeight(),
-            background = WidgetColors.key,
-            textColor = WidgetColors.onDark,
-            action = GlanceModifier.clickable(actionRunCallback<UndoAction>()),
-        )
-    }
-}
-
-@Composable
-private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: GlanceModifier) {
-    val amountLabel = button.fixedAmountCents
-        ?.let { Money.formatShort(it) }
-        ?: "…"
+private fun CategoryTile(button: QuickButton, layout: WidgetLayout, modifier: GlanceModifier) {
     val context = LocalContext.current
     val action = if (button.fixedAmountCents != null) {
         GlanceModifier.clickable(
@@ -472,7 +419,6 @@ private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: Gla
             )
         )
     } else {
-        // "Ask for amount" buttons open the quick-entry dialog with their category preselected.
         GlanceModifier.clickable(
             actionStartActivity(QuickEntryActivity.intent(context, button.categoryId))
         )
@@ -480,9 +426,9 @@ private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: Gla
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .background(WidgetColors.key)
-            .cornerRadius(14.dp)
-            .padding(horizontal = 4.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.CATEGORY_CORNER.dp)
+            .padding(horizontal = WidgetStyle.CATEGORY_PADDING_H.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
@@ -491,17 +437,86 @@ private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: Gla
             text = button.emoji + " " + button.label,
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.onDark,
-                fontSize = grid.labelSp.sp,
+                color = WidgetStyle.onDark,
+                fontSize = layout.categoryLabelSp.sp,
                 textAlign = TextAlign.Center,
             ),
         )
         Text(
-            text = amountLabel,
+            text = button.fixedAmountCents?.let { Money.formatShort(it) } ?: "…",
             maxLines = 1,
             style = TextStyle(
-                color = WidgetColors.accent,
-                fontSize = grid.amountSp.sp,
+                color = WidgetStyle.accent,
+                fontSize = layout.categoryAmountSp.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            ),
+        )
+    }
+}
+
+/** Coins and notes: just the amount, in a tight row of their own. */
+@Composable
+private fun CoinRow(coins: List<QuickButton>, layout: WidgetLayout) {
+    if (coins.isEmpty()) return
+    Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = WidgetStyle.COIN_GAP.dp)) {
+        coins.chunked(layout.coinColumns).forEachIndexed { rowIndex, row ->
+            if (rowIndex > 0) Spacer(GlanceModifier.height(WidgetStyle.COIN_GAP.dp))
+            Row(
+                modifier = GlanceModifier
+                    .fillMaxWidth()
+                    .height(WidgetStyle.COIN_HEIGHT.dp),
+            ) {
+                // Medio hueco a cada lado de cada moneda: entre dos suman COIN_GAP y
+                // todas quedan del mismo ancho. Con un Spacer entre cada par serian 11
+                // hijos y Glance descarta a partir del decimo (se perdia el de 50).
+                row.forEach { coin ->
+                    CoinButton(
+                        coin = coin,
+                        modifier = GlanceModifier
+                            .defaultWeight()
+                            .padding(horizontal = (WidgetStyle.COIN_GAP / 2f).dp),
+                    )
+                }
+                repeat(layout.coinColumns - row.size) {
+                    Spacer(GlanceModifier.defaultWeight())
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoinButton(coin: QuickButton, modifier: GlanceModifier) {
+    val context = LocalContext.current
+    val action = if (coin.fixedAmountCents != null) {
+        GlanceModifier.clickable(
+            actionRunCallback<QuickAddAction>(
+                actionParametersOf(WidgetParams.buttonId to coin.id)
+            )
+        )
+    } else {
+        GlanceModifier.clickable(
+            actionStartActivity(QuickEntryActivity.intent(context, coin.categoryId))
+        )
+    }
+    Column(
+        modifier = modifier
+            .fillMaxHeight()
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.COIN_CORNER.dp)
+            .then(action),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = coin.fixedAmountCents
+                ?.let { Money.formatShort(it, spaced = WidgetStyle.COIN_SPACE_BEFORE_EURO) }
+                ?: coin.label,
+            maxLines = 1,
+            style = TextStyle(
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.COIN_TEXT_SP.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             ),
@@ -510,30 +525,94 @@ private fun QuickButtonCell(button: QuickButton, grid: GridLayout, modifier: Gla
 }
 
 @Composable
-private fun ActionCell(
-    label: String,
-    modifier: GlanceModifier,
-    background: ColorProvider,
-    textColor: ColorProvider,
-    action: GlanceModifier,
-) {
+private fun ActionRow() {
+    val context = LocalContext.current
+    Row(modifier = GlanceModifier.fillMaxWidth().height(WidgetStyle.ACTION_HEIGHT.dp)) {
+        ActionCell(
+            label = "Otro…",
+            modifier = GlanceModifier.defaultWeight(),
+            action = GlanceModifier.clickable(
+                actionStartActivity(QuickEntryActivity.intent(context, categoryId = null))
+            ),
+        )
+        Spacer(GlanceModifier.width(WidgetStyle.ACTION_GAP.dp))
+        ActionCell(
+            label = "Deshacer",
+            modifier = GlanceModifier.defaultWeight(),
+            action = GlanceModifier.clickable(actionRunCallback<UndoAction>()),
+        )
+    }
+}
+
+@Composable
+private fun ActionCell(label: String, modifier: GlanceModifier, action: GlanceModifier) {
     Column(
         modifier = modifier
-            .background(background)
-            .cornerRadius(14.dp)
-            .padding(vertical = 12.dp)
+            .fillMaxHeight()
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
             .then(action),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             maxLines = 1,
             style = TextStyle(
-                color = textColor,
-                fontSize = 14.sp,
+                color = WidgetStyle.onDark,
+                fontSize = WidgetStyle.ACTION_TEXT_SP.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
             ),
         )
+    }
+}
+
+/** Today's expenses, newest first: concept on the left, amount on the right. */
+@Composable
+private fun TodayList(expenses: List<ExpenseWithCategory>, modifier: GlanceModifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = WidgetStyle.HISTORY_TOP_GAP.dp)
+            .background(WidgetStyle.card)
+            .cornerRadius(WidgetStyle.HEADER_CORNER.dp)
+            .padding(
+                horizontal = WidgetStyle.CARD_PADDING_H.dp,
+                vertical = WidgetStyle.HISTORY_ROW_PADDING.dp,
+            ),
+    ) {
+        if (expenses.isEmpty()) {
+            Text(
+                text = "Sin gastos hoy",
+                style = TextStyle(color = WidgetStyle.muted, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
+            )
+            return@Column
+        }
+        LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
+            items(expenses.take(WidgetStyle.HISTORY_MAX_ROWS), itemId = { it.id }) { expense ->
+                Row(
+                    modifier = GlanceModifier.fillMaxWidth().padding(vertical = WidgetStyle.HISTORY_ROW_PADDING.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = expense.categoryEmoji + " " +
+                            (expense.note?.takeIf { it.isNotBlank() } ?: expense.categoryName),
+                        maxLines = 1,
+                        modifier = GlanceModifier.defaultWeight(),
+                        style = TextStyle(color = WidgetStyle.onDark, fontSize = WidgetStyle.HISTORY_TEXT_SP.sp),
+                    )
+                    Text(
+                        text = Money.format(expense.amountCents),
+                        maxLines = 1,
+                        style = TextStyle(
+                            color = WidgetStyle.onDark,
+                            fontSize = WidgetStyle.HISTORY_TEXT_SP.sp,
+                            fontWeight = FontWeight.Bold,
+                        ),
+                    )
+                }
+            }
+        }
     }
 }

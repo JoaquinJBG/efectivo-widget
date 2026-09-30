@@ -151,7 +151,8 @@ private fun ButtonRow(
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                button.fixedAmountCents?.let { Money.formatShort(it) } ?: "Preguntar importe",
+                (button.fixedAmountCents?.let { Money.formatShort(it) } ?: "Preguntar importe") +
+                    (if (button.compact) " · pequeño" else ""),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

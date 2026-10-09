@@ -96,6 +96,21 @@ class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
         store.expenses.value = store.expenses.value.map { if (it.id == expense.id) expense else it }
     }
 
+    override suspend fun updateFields(
+        id: Long,
+        amountCents: Long,
+        categoryId: Long,
+        note: String?,
+    ) {
+        store.expenses.value = store.expenses.value.map {
+            if (it.id == id) {
+                it.copy(amountCents = amountCents, categoryId = categoryId, note = note)
+            } else {
+                it
+            }
+        }
+    }
+
     override suspend fun delete(expense: Expense) = deleteById(expense.id)
 
     override suspend fun deleteById(id: Long) {
@@ -187,6 +202,13 @@ class FakeCashDao(private val store: FakeStore) : CashMovementDao {
 
     override fun observeAll(): Flow<List<CashMovement>> =
         store.cash.map { list -> list.sortedByDescending { it.timestamp } }
+
+    override suspend fun update(movement: CashMovement) {
+        store.cash.value = store.cash.value.map { if (it.id == movement.id) movement else it }
+    }
+
+    override suspend fun getById(id: Long): CashMovement? =
+        store.cash.value.find { it.id == id }
 }
 
 class FakeQuickButtonDao(private val store: FakeStore) : QuickButtonDao {

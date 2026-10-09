@@ -97,18 +97,64 @@ class ExpenseRepository(
 
     fun observeAllExpenses(): Flow<List<ExpenseWithCategory>> = expenseDao.observeAllWithCategory()
 
-    /** Historial por días, del más reciente al más antiguo, cada uno con su total. */
-    fun observeExpensesByDay(): Flow<List<DaySection>> =
-        expenseDao.observeAllWithCategory().map { expenses ->
-            expenses
+    /**
+     * Historial por días, del más reciente al más antiguo, mezclando gastos y entradas
+     * de efectivo. [filter] deja ver solo una de las dos cosas.
+     */
+    fun observeLedgerByDay(filter: MovementType? = null): Flow<List<DaySection>> =
+        combine(
+            expenseDao.observeAllWithCategory(),
+            cashDao.observeAll(),
+        ) { expenses, cash ->
+            val entries = buildList {
+                if (filter != MovementType.INGRESO) {
+                    expenses.forEach {
+                        add(
+                            LedgerEntry(
+                                id = it.id,
+                                type = MovementType.GASTO,
+                                amountCents = it.amountCents,
+                                timestamp = it.timestamp,
+                                note = it.note,
+                                categoryId = it.categoryId,
+                                categoryName = it.categoryName,
+                                categoryEmoji = it.categoryEmoji,
+                            )
+                        )
+                    }
+                }
+                if (filter != MovementType.GASTO) {
+                    cash.forEach {
+                        add(
+                            LedgerEntry(
+                                id = it.id,
+                                type = MovementType.INGRESO,
+                                amountCents = it.amountCents,
+                                timestamp = it.timestamp,
+                                note = it.note,
+                            )
+                        )
+                    }
+                }
+            }
+
+            entries
                 .groupBy { TimeRanges.toLocalDate(it.timestamp, zone) }
                 .entries
                 .sortedByDescending { it.key }
                 .map { (date, items) ->
                     DaySection(
                         date = date,
-                        totalCents = items.sumOf { it.amountCents },
-                        expenses = items,
+                        spentCents = items
+                            .filter { it.type == MovementType.GASTO }
+                            .sumOf { it.amountCents },
+                        receivedCents = items
+                            .filter { it.type == MovementType.INGRESO }
+                            .sumOf { it.amountCents },
+                        entries = items.sortedWith(
+                            compareByDescending<LedgerEntry> { it.timestamp }
+                                .thenByDescending { it.id }
+                        ),
                     )
                 }
         }
@@ -161,8 +207,9 @@ class ExpenseRepository(
         return id
     }
 
-    suspend fun updateExpense(expense: Expense) {
-        expenseDao.update(expense)
+    /** Cambia importe, categoría y nota; la fecha y el origen se quedan como estaban. */
+    suspend fun updateExpense(id: Long, amountCents: Long, categoryId: Long, note: String?) {
+        expenseDao.updateFields(id, amountCents, categoryId, note?.takeIf { it.isNotBlank() })
         onChanged()
     }
 
@@ -181,6 +228,19 @@ class ExpenseRepository(
         )
         onChanged()
         return id
+    }
+
+    suspend fun updateCashMovement(id: Long, amountCents: Long, note: String?) {
+        val current = cashDao.getById(id) ?: return
+        cashDao.update(
+            current.copy(amountCents = amountCents, note = note?.takeIf { it.isNotBlank() })
+        )
+        onChanged()
+    }
+
+    suspend fun deleteCashMovement(id: Long) {
+        cashDao.deleteById(id)
+        onChanged()
     }
 
     // ---- botones del widget ----
@@ -252,10 +312,15 @@ class ExpenseRepository(
     suspend fun enabledQuickButtons(): List<QuickButton> = quickButtonDao.enabled()
 }
 
+/**
+ * Un día del historial, con sus movimientos mezclados y los dos totales por separado:
+ * sumarlos en una sola cifra escondería que ese día hubo una retirada del cajero.
+ */
 data class DaySection(
     val date: LocalDate,
-    val totalCents: Long,
-    val expenses: List<ExpenseWithCategory>,
+    val spentCents: Long,
+    val receivedCents: Long,
+    val entries: List<LedgerEntry>,
 )
 
 data class CategoryShare(

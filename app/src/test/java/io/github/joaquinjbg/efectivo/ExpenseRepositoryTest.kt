@@ -3,6 +3,7 @@ package io.github.joaquinjbg.efectivo
 import io.github.joaquinjbg.efectivo.data.Category
 import io.github.joaquinjbg.efectivo.data.ExpenseRepository
 import io.github.joaquinjbg.efectivo.data.ExpenseSource
+import io.github.joaquinjbg.efectivo.data.MovementType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -213,10 +214,95 @@ class ExpenseRepositoryTest {
         assertEquals(300L, repository.totalOn(day))
         assertEquals(300L, repository.observeTotalOn(day).first())
 
-        val sections = repository.observeExpensesByDay().first()
+        val sections = repository.observeLedgerByDay().first()
         assertEquals(listOf(day, day.minusDays(1)), sections.map { it.date })
-        assertEquals(300L, sections[0].totalCents)
-        assertEquals(400L, sections[1].totalCents)
+        assertEquals(300L, sections[0].spentCents)
+        assertEquals(400L, sections[1].spentCents)
+    }
+
+    @Test
+    fun `el historial mezcla gastos y entradas de efectivo`() = runTest {
+        val day = LocalDate.of(2026, 9, 29)
+        repository.addExpense(250, cafe, null, ExpenseSource.WIDGET, at(day, 9))
+        repository.addCash(20000, "cajero", at(day, 10))
+        repository.addExpense(5000, gasoil, null, ExpenseSource.APP, at(day, 11))
+
+        val day0 = repository.observeLedgerByDay().first().first()
+
+        assertEquals(3, day0.entries.size)
+        // Del más reciente al más antiguo, da igual de qué tabla venga cada uno.
+        assertEquals(
+            listOf(MovementType.GASTO, MovementType.INGRESO, MovementType.GASTO),
+            day0.entries.map { it.type },
+        )
+        // Los dos totales van por separado: sumarlos escondería la retirada del cajero.
+        assertEquals(5250L, day0.spentCents)
+        assertEquals(20000L, day0.receivedCents)
+        assertEquals("cajero", day0.entries[1].note)
+    }
+
+    @Test
+    fun `el filtro deja ver solo gastos o solo ingresos`() = runTest {
+        val day = LocalDate.of(2026, 9, 29)
+        repository.addExpense(250, cafe, null, ExpenseSource.WIDGET, at(day, 9))
+        repository.addCash(20000, "cajero", at(day, 10))
+
+        val soloGastos = repository.observeLedgerByDay(MovementType.GASTO).first()
+        assertEquals(listOf(MovementType.GASTO), soloGastos.first().entries.map { it.type })
+        assertEquals(0L, soloGastos.first().receivedCents)
+
+        val soloIngresos = repository.observeLedgerByDay(MovementType.INGRESO).first()
+        assertEquals(listOf(MovementType.INGRESO), soloIngresos.first().entries.map { it.type })
+        assertEquals(0L, soloIngresos.first().spentCents)
+    }
+
+    @Test
+    fun `una entrada de efectivo en negativo es una correccion, no un ingreso`() = runTest {
+        repository.addCash(-2000, "me sobraba")
+
+        val entry = repository.observeLedgerByDay().first().first().entries.first()
+
+        assertTrue(entry.isCorrection)
+    }
+
+    @Test
+    fun `editar una entrada de efectivo cambia importe, nota y saldo`() = runTest {
+        val id = repository.addCash(10000, "cajero")
+
+        repository.updateCashMovement(id, 15000, "cajero del centro")
+
+        val entry = repository.observeLedgerByDay().first().first().entries.first()
+        assertEquals(15000L, entry.amountCents)
+        assertEquals("cajero del centro", entry.note)
+        assertEquals(15000L, repository.balance())
+    }
+
+    @Test
+    fun `borrar una entrada de efectivo la quita del historial y del saldo`() = runTest {
+        val id = repository.addCash(10000)
+        repository.addExpense(200, cafe, null, ExpenseSource.APP)
+
+        repository.deleteCashMovement(id)
+
+        val entries = repository.observeLedgerByDay().first().flatMap { it.entries }
+        assertEquals(listOf(MovementType.GASTO), entries.map { it.type })
+        assertEquals(-200L, repository.balance())
+    }
+
+    @Test
+    fun `editar un gasto conserva su fecha y su origen`() = runTest {
+        val day = LocalDate.of(2026, 9, 29)
+        val id = repository.addExpense(200, cafe, "antes", ExpenseSource.WIDGET, at(day, 9))
+
+        repository.updateExpense(id, 350, ocio, "después")
+
+        val entry = repository.observeLedgerByDay().first().first().entries.first()
+        assertEquals(350L, entry.amountCents)
+        assertEquals("Ocio", entry.categoryName)
+        assertEquals("después", entry.note)
+        // Editar desde la app no debe reescribir que el gasto se apuntó desde el widget.
+        assertEquals(at(day, 9), entry.timestamp)
+        assertEquals(ExpenseSource.WIDGET, store.expenses.value.first { it.id == id }.source)
     }
 
     @Test

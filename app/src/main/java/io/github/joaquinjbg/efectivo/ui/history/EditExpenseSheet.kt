@@ -22,7 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.joaquinjbg.efectivo.data.Category
-import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
+import io.github.joaquinjbg.efectivo.data.LedgerEntry
 import io.github.joaquinjbg.efectivo.ui.common.AmountDisplay
 import io.github.joaquinjbg.efectivo.ui.common.BigButton
 import io.github.joaquinjbg.efectivo.ui.common.CategoryChips
@@ -34,16 +34,16 @@ import io.github.joaquinjbg.efectivo.util.Money
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditExpenseSheet(
-    expense: ExpenseWithCategory,
+    entry: LedgerEntry,
     categories: List<Category>,
     onDismiss: () -> Unit,
     onSave: (amountCents: Long, categoryId: Long, note: String?) -> Unit,
     onDelete: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val input = rememberAmountInput(initial = Money.formatNumber(expense.amountCents))
-    var selected by remember { mutableStateOf(expense.categoryId) }
-    var note by remember { mutableStateOf(expense.note.orEmpty()) }
+    val input = rememberAmountInput(initial = Money.formatNumber(entry.amountCents))
+    var selected by remember { mutableStateOf(entry.categoryId ?: 0L) }
+    var note by remember { mutableStateOf(entry.note.orEmpty()) }
 
     val cents = input.cents
     val canSave = cents != null && cents > 0L

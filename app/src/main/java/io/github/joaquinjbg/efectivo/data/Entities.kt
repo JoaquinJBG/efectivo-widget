@@ -90,6 +90,29 @@ data class WidgetTotals(
     val monthCents: Long,
 )
 
+enum class MovementType { GASTO, INGRESO }
+
+/**
+ * Una línea del historial, venga de un gasto o de una entrada de efectivo.
+ *
+ * El historial mezcla las dos tablas, así que necesita una forma común de hablar de
+ * ambas. [categoryName] y [categoryEmoji] solo los traen los gastos.
+ */
+data class LedgerEntry(
+    val id: Long,
+    val type: MovementType,
+    /** Siempre positivo. El signo lo lleva [type], salvo en correcciones a la baja. */
+    val amountCents: Long,
+    val timestamp: Long,
+    val note: String?,
+    val categoryId: Long? = null,
+    val categoryName: String? = null,
+    val categoryEmoji: String? = null,
+) {
+    /** Una entrada de efectivo en negativo es una corrección del saldo, no un ingreso. */
+    val isCorrection: Boolean get() = type == MovementType.INGRESO && amountCents < 0
+}
+
 /** Una línea del desglose mensual. */
 data class CategoryTotal(
     val categoryId: Long,

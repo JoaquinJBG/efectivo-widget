@@ -51,6 +51,13 @@ interface ExpenseDao {
     @Query("DELETE FROM expenses WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    /** Solo lo editable: así el timestamp y el origen se conservan tal cual. */
+    @Query(
+        "UPDATE expenses SET amountCents = :amountCents, categoryId = :categoryId, " +
+            "note = :note WHERE id = :id"
+    )
+    suspend fun updateFields(id: Long, amountCents: Long, categoryId: Long, note: String?)
+
     @Query("SELECT COALESCE(SUM(amountCents), 0) FROM expenses")
     fun observeTotal(): Flow<Long>
 
@@ -161,6 +168,12 @@ interface CashMovementDao {
 
     @Query("SELECT * FROM cash_movements ORDER BY timestamp DESC, id DESC")
     fun observeAll(): Flow<List<CashMovement>>
+
+    @Update
+    suspend fun update(movement: CashMovement)
+
+    @Query("SELECT * FROM cash_movements WHERE id = :id")
+    suspend fun getById(id: Long): CashMovement?
 }
 
 @Dao

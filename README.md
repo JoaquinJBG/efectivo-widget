@@ -15,6 +15,19 @@ el importe es variable. No hay confirmaciones ni diálogos por medio.
 - **Resumen mensual** por categoría, con importes y porcentajes.
 - **Entradas de efectivo** (retirada del cajero) y correcciones a la baja.
 
+<p align="center">
+  <img src="docs/widget.png" width="420" alt="Widget en el escritorio: saldo, totales, botones e historial del día">
+</p>
+
+<p align="center">
+  <img src="docs/inicio.png" width="200" alt="Inicio">
+  <img src="docs/historial.png" width="200" alt="Historial">
+  <img src="docs/mes.png" width="200" alt="Resumen del mes">
+  <img src="docs/botones.png" width="200" alt="Botones del widget">
+</p>
+
+<p align="center"><sub>Widget · Inicio · Historial · Mes · Botones (con datos inventados)</sub></p>
+
 ## Código abierto e instalación del APK
 
 Efectivo es software libre, con licencia [MIT](LICENSE): puedes usarlo, modificarlo y

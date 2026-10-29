@@ -28,6 +28,26 @@ el importe es variable. No hay confirmaciones ni diálogos por medio.
 - **Resumen mensual** por categoría, con importes y porcentajes.
 - **Entradas de efectivo** (retirada del cajero) y correcciones a la baja.
 
+## Código abierto e instalación del APK
+
+Efectivo es software libre, con licencia [MIT](LICENSE): puedes usarlo, modificarlo y
+repartirlo. El APK ya compilado está en la página de
+[Releases](https://github.com/JoaquinJBG/efectivo-widget/releases).
+
+1. Descarga `efectivo-v1.1-debug.apk` desde el móvil.
+2. Android pedirá permiso para instalar apps de orígenes desconocidos para el navegador o
+   el gestor de archivos que lo haya descargado (`Ajustes` → `Seguridad` o `Aplicaciones` →
+   *Instalar apps desconocidas*). Concédelo solo a esa app.
+3. Abre el APK e instala. Luego pon el widget (más abajo, en *Cómo se instala*).
+
+**Sobre la firma.** Es un APK de depuración: está firmado con la clave de depuración del PC
+donde se compiló, no con una clave de release, y la app no está en Play Store. Android solo
+deja instalar una actualización encima de otra si las dos llevan la misma firma, así que las
+actualizaciones oficiales tienen que firmarse con esa misma clave, es decir, compilarse en
+el PC del autor. Si compilas tú el proyecto, tu APK llevará otra clave y no se instalará
+encima del de la Release: habría que desinstalar antes, y como la app no exporta datos
+(`allowBackup=false`), se perderían los movimientos.
+
 ## Decisiones de diseño
 
 **El saldo nunca se guarda.** Se calcula siempre como `suma(entradas de efectivo) −
@@ -185,3 +205,7 @@ No hay nada más que tocar en `appwidget-provider`.
 
 Sincronización, copias de seguridad, varias monedas, presupuestos y alertas, inicio de
 sesión, diseño para tabletas y publicación en Play Store.
+
+## Licencia
+
+[MIT](LICENSE).

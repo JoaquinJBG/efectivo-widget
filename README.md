@@ -6,19 +6,6 @@ Sin cuentas, sin red y sin nube: todo vive en una base de datos local del móvil
 El objetivo es la velocidad. Apuntar un gasto desde el widget cuesta **un toque**, o dos si
 el importe es variable. No hay confirmaciones ni diálogos por medio.
 
-<p align="center">
-  <img src="docs/widget.png" width="420" alt="Widget en el escritorio: saldo, totales, botones e historial del día">
-</p>
-
-<p align="center">
-  <img src="docs/inicio.png" width="200" alt="Inicio">
-  <img src="docs/historial.png" width="200" alt="Historial">
-  <img src="docs/mes.png" width="200" alt="Resumen del mes">
-  <img src="docs/botones.png" width="200" alt="Botones del widget">
-</p>
-
-<p align="center"><sub>Widget · Inicio · Historial · Mes · Botones</sub></p>
-
 ## Qué hace
 
 - **Registrar un gasto con un toque** desde el widget, sin abrir la app.

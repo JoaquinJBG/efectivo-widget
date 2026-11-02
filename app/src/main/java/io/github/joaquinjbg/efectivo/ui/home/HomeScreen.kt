@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,6 +32,7 @@ import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
 import io.github.joaquinjbg.efectivo.ui.AppViewModelFactory
 import io.github.joaquinjbg.efectivo.ui.common.BigButton
 import io.github.joaquinjbg.efectivo.ui.common.EntrySheet
+import io.github.joaquinjbg.efectivo.ui.common.FitText
 import io.github.joaquinjbg.efectivo.ui.common.euro
 import io.github.joaquinjbg.efectivo.util.Haptics
 import java.time.Instant
@@ -47,59 +50,65 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var sheet by remember { mutableStateOf(Sheet.NONE) }
 
-    Column(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Efectivo disponible",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            euro(state.balanceCents),
-            fontSize = 56.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Hoy",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                euro(state.todayTotalCents),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+    // Todo en una sola lista con scroll: en horizontal la cabecera ocupa la pantalla entera
+    // y, con una columna fija, los gastos de hoy quedaban fuera de la pantalla.
+    LazyColumn(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        item {
+            Column {
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "Efectivo disponible",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FitText(
+                    euro(state.balanceCents),
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Hoy",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        euro(state.todayTotalCents),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
 
-        Spacer(Modifier.height(20.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigButton("Gasto", onClick = { sheet = Sheet.EXPENSE }, modifier = Modifier.weight(1f))
-            BigButton("Efectivo", onClick = { sheet = Sheet.CASH }, modifier = Modifier.weight(1f))
-        }
+                Spacer(Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BigButton("Gasto", onClick = { sheet = Sheet.EXPENSE }, modifier = Modifier.weight(1f))
+                    BigButton("Efectivo", onClick = { sheet = Sheet.CASH }, modifier = Modifier.weight(1f))
+                }
 
-        Spacer(Modifier.height(20.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                Spacer(Modifier.height(20.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            }
+        }
 
         if (state.todayExpenses.isEmpty()) {
-            Spacer(Modifier.height(24.dp))
-            Text(
-                "Todavía no hay gastos hoy",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            item {
+                Text(
+                    "Todavía no hay gastos hoy",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+            }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(state.todayExpenses, key = { it.id }) { expense ->
-                    ExpenseRow(expense)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                }
+            items(state.todayExpenses, key = { it.id }) { expense ->
+                ExpenseRow(expense)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             }
         }
     }
@@ -137,15 +146,17 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun ExpenseRow(expense: ExpenseWithCategory) {
     Row(
-        Modifier.fillMaxWidth().height(64.dp),
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(
                 (expense.categoryEmoji.ifBlank { "🧾" }) + "  " + (expense.categoryName.ifBlank { "Sin categoría" }),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             val time = Instant.ofEpochMilli(expense.timestamp)
                 .atZone(ZoneId.systemDefault()).toLocalTime().format(timeFormat)
@@ -153,12 +164,16 @@ private fun ExpenseRow(expense: ExpenseWithCategory) {
                 if (expense.note.isNullOrBlank()) time else "$time · ${expense.note}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Text(
             euro(expense.amountCents),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }

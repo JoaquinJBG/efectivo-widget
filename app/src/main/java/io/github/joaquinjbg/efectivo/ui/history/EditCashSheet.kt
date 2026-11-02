@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +29,7 @@ import io.github.joaquinjbg.efectivo.data.LedgerEntry
 import io.github.joaquinjbg.efectivo.ui.common.AmountDisplay
 import io.github.joaquinjbg.efectivo.ui.common.BigButton
 import io.github.joaquinjbg.efectivo.ui.common.Keypad
+import io.github.joaquinjbg.efectivo.ui.common.accentChipColors
 import io.github.joaquinjbg.efectivo.ui.common.rememberAmountInput
 import io.github.joaquinjbg.efectivo.util.Money
 import kotlin.math.absoluteValue
@@ -63,6 +66,7 @@ fun EditCashSheet(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -75,12 +79,14 @@ fun EditCashSheet(
                     onClick = { negative = false },
                     label = { Text("Añadir") },
                     modifier = Modifier.height(48.dp),
+                    colors = accentChipColors(),
                 )
                 FilterChip(
                     selected = negative,
                     onClick = { negative = true },
                     label = { Text("Restar") },
                     modifier = Modifier.height(48.dp),
+                    colors = accentChipColors(),
                 )
             }
 

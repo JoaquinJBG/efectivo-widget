@@ -12,22 +12,60 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.joaquinjbg.efectivo.data.Category
 import io.github.joaquinjbg.efectivo.util.Money
 
+/**
+ * Texto de una sola línea que reduce el tamaño de la letra en vez de partirse cuando no cabe:
+ * con un importe grande el "€" no debe caer solo a la línea de abajo.
+ */
+@Composable
+fun FitText(
+    text: String,
+    fontSize: TextUnit,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    fontWeight: FontWeight? = null,
+    textAlign: TextAlign? = null,
+    style: TextStyle = LocalTextStyle.current,
+) {
+    var size by remember(text) { mutableStateOf(fontSize) }
+    Text(
+        text = text,
+        modifier = modifier,
+        color = color,
+        fontSize = size,
+        fontWeight = fontWeight,
+        textAlign = textAlign,
+        style = style,
+        maxLines = 1,
+        softWrap = false,
+        onTextLayout = { if (it.hasVisualOverflow && size.value > 16f) size = (size.value * 0.9f).sp },
+    )
+}
+
 /** El número grande de la parte de arriba de la hoja de entrada. */
 @Composable
 fun AmountDisplay(input: AmountInput, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-        Text(
+        FitText(
             text = input.display + " €",
             fontSize = 52.sp,
             textAlign = TextAlign.Center,

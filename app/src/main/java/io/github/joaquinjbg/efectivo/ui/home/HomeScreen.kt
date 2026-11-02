@@ -30,6 +30,7 @@ import io.github.joaquinjbg.efectivo.data.ExpenseWithCategory
 import io.github.joaquinjbg.efectivo.ui.AppViewModelFactory
 import io.github.joaquinjbg.efectivo.ui.common.BigButton
 import io.github.joaquinjbg.efectivo.ui.common.EntrySheet
+import io.github.joaquinjbg.efectivo.ui.common.FitText
 import io.github.joaquinjbg.efectivo.ui.common.euro
 import io.github.joaquinjbg.efectivo.util.Haptics
 import java.time.Instant
@@ -54,7 +55,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
+        FitText(
             euro(state.balanceCents),
             fontSize = 56.sp,
             fontWeight = FontWeight.Bold,

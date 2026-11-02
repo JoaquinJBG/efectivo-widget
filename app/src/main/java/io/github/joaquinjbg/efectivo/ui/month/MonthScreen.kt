@@ -26,12 +26,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.joaquinjbg.efectivo.data.CategoryShare
 import io.github.joaquinjbg.efectivo.ui.AppViewModelFactory
+import io.github.joaquinjbg.efectivo.ui.common.FitText
 import io.github.joaquinjbg.efectivo.ui.common.euro
 import io.github.joaquinjbg.efectivo.util.Dates
 import kotlin.math.roundToInt
@@ -76,7 +78,7 @@ fun MonthScreen(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
+        FitText(
             euro(summary.totalCents),
             fontSize = 48.sp,
             fontWeight = FontWeight.Bold,
@@ -118,25 +120,34 @@ private fun CategoryShareRow(share: CategoryShare, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // El nombre cede ancho (con puntos suspensivos) antes que el importe: un nombre
+            // largo no debe dejar al importe sin sitio y partirlo en vertical.
             Text(
                 share.emoji + "  " + share.name,
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.size(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     (share.share * 100).roundToInt().toString() + " %",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
                 )
                 Spacer(Modifier.size(12.dp))
                 Text(
                     euro(share.totalCents),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
         }

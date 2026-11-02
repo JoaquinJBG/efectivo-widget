@@ -75,6 +75,13 @@ fun AmountDisplay(input: AmountInput, modifier: Modifier = Modifier) {
     }
 }
 
+/** Colores de los chips de selección: el elegido va en verde, igual que en el resto de la app. */
+@Composable
+fun accentChipColors() = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = MaterialTheme.colorScheme.primary,
+    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+)
+
 @Composable
 fun CategoryChips(
     categories: List<Category>,

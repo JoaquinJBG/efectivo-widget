@@ -27,6 +27,7 @@ import io.github.joaquinjbg.efectivo.data.LedgerEntry
 import io.github.joaquinjbg.efectivo.ui.common.AmountDisplay
 import io.github.joaquinjbg.efectivo.ui.common.BigButton
 import io.github.joaquinjbg.efectivo.ui.common.Keypad
+import io.github.joaquinjbg.efectivo.ui.common.accentChipColors
 import io.github.joaquinjbg.efectivo.ui.common.rememberAmountInput
 import io.github.joaquinjbg.efectivo.util.Money
 import kotlin.math.absoluteValue
@@ -75,12 +76,14 @@ fun EditCashSheet(
                     onClick = { negative = false },
                     label = { Text("Añadir") },
                     modifier = Modifier.height(48.dp),
+                    colors = accentChipColors(),
                 )
                 FilterChip(
                     selected = negative,
                     onClick = { negative = true },
                     label = { Text("Restar") },
                     modifier = Modifier.height(48.dp),
+                    colors = accentChipColors(),
                 )
             }
 

@@ -79,12 +79,14 @@ fun EntrySheet(
                         onClick = { negative = false },
                         label = { Text("Añadir") },
                         modifier = Modifier.height(48.dp),
+                    colors = accentChipColors(),
                     )
                     FilterChip(
                         selected = negative,
                         onClick = { negative = true },
                         label = { Text("Restar") },
                         modifier = Modifier.height(48.dp),
+                    colors = accentChipColors(),
                     )
                 }
                 Spacer(Modifier.height(12.dp))

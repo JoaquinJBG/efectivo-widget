@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -192,6 +194,9 @@ private fun DayHeader(day: DaySection) {
             Dates.dayLabel(day.date),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false).padding(end = 10.dp),
         )
         // Los dos totales por separado: sumarlos escondería la retirada del cajero.
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -201,6 +206,8 @@ private fun DayHeader(day: DaySection) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Accent,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             if (day.spentCents != 0L) {
@@ -209,6 +216,8 @@ private fun DayHeader(day: DaySection) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
         }
@@ -227,16 +236,18 @@ private fun EntryRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .heightIn(min = 64.dp)
             .background(MaterialTheme.colorScheme.background)
             .combinedClickable(onClick = onTap, onLongClick = onLongPress),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(top = 8.dp, bottom = 8.dp, end = 8.dp)) {
             Text(
                 conceptOf(entry),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             val time = Instant.ofEpochMilli(entry.timestamp)
                 .atZone(ZoneId.systemDefault()).toLocalTime().format(timeFormat)
@@ -244,6 +255,8 @@ private fun EntryRow(
                 if (entry.note.isNullOrBlank()) time else time + " · " + entry.note,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Text(
@@ -251,6 +264,8 @@ private fun EntryRow(
             else euro(entry.amountCents),
             style = MaterialTheme.typography.titleLarge,
             color = if (isIncome) Accent else MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            softWrap = false,
         )
         IconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
             Icon(

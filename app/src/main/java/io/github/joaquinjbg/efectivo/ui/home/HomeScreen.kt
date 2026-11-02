@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -138,15 +140,17 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun ExpenseRow(expense: ExpenseWithCategory) {
     Row(
-        Modifier.fillMaxWidth().height(64.dp),
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(
                 (expense.categoryEmoji.ifBlank { "🧾" }) + "  " + (expense.categoryName.ifBlank { "Sin categoría" }),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             val time = Instant.ofEpochMilli(expense.timestamp)
                 .atZone(ZoneId.systemDefault()).toLocalTime().format(timeFormat)
@@ -154,12 +158,16 @@ private fun ExpenseRow(expense: ExpenseWithCategory) {
                 if (expense.note.isNullOrBlank()) time else "$time · ${expense.note}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Text(
             euro(expense.amountCents),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            softWrap = false,
         )
     }
 }

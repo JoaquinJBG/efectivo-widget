@@ -305,6 +305,127 @@ class ExpenseRepositoryTest {
         assertEquals(ExpenseSource.WIDGET, store.expenses.value.first { it.id == id }.source)
     }
 
+    private fun at(instant: java.time.LocalDateTime): Long =
+        instant.atZone(zone).toInstant().toEpochMilli()
+
+    @Test
+    fun `detalle de categoria solo trae esa categoria y ese mes`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        repository.addExpense(200, cafe, "con leche", ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 3)))
+        repository.addExpense(300, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 15)))
+        // Otra categoría, mismo mes.
+        repository.addExpense(1500, ocio, "cine", ExpenseSource.APP, at(LocalDate.of(2026, 9, 20)))
+        // Misma categoría, otros meses.
+        repository.addExpense(9999, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 8, 31)))
+        repository.addExpense(8888, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 10, 1)))
+
+        val rows = repository.observeCategoryExpenses(cafe, september).first()
+
+        assertEquals(listOf(300L, 200L), rows.map { it.amountCents })
+        assertTrue(rows.all { it.categoryId == cafe && it.categoryName == "Café" })
+    }
+
+    @Test
+    fun `detalle de categoria va del mas reciente al mas antiguo`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        val day = LocalDate.of(2026, 9, 10)
+        repository.addExpense(100, cafe, "a", ExpenseSource.APP, at(day, 9))
+        repository.addExpense(200, cafe, "c", ExpenseSource.APP, at(day, 18))
+        repository.addExpense(300, cafe, "b", ExpenseSource.APP, at(day, 12))
+        repository.addExpense(400, cafe, "d", ExpenseSource.APP, at(LocalDate.of(2026, 9, 1)))
+        // Misma hora exacta: gana el que se apuntó después.
+        repository.addExpense(500, cafe, "e", ExpenseSource.APP, at(day, 18))
+
+        val rows = repository.observeCategoryExpenses(cafe, september).first()
+
+        assertEquals(listOf("e", "c", "b", "a", "d"), rows.map { it.note })
+    }
+
+    @Test
+    fun `detalle de una categoria sin gastos en el mes esta vacio`() = runTest {
+        repository.addExpense(200, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 3)))
+
+        assertTrue(repository.observeCategoryExpenses(ocio, YearMonth.of(2026, 9)).first().isEmpty())
+        assertTrue(repository.observeCategoryExpenses(cafe, YearMonth.of(2026, 7)).first().isEmpty())
+    }
+
+    @Test
+    fun `detalle de categoria incluye el primer y el ultimo instante del mes`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        val (from, until) = io.github.joaquinjbg.efectivo.util.TimeRanges.month(september, zone)
+        repository.addExpense(100, cafe, "primero", ExpenseSource.APP, from)
+        repository.addExpense(200, cafe, "ultimo", ExpenseSource.APP, until - 1)
+        // Un milisegundo antes del mes y el primer instante del siguiente: fuera.
+        repository.addExpense(300, cafe, "antes", ExpenseSource.APP, from - 1)
+        repository.addExpense(400, cafe, "despues", ExpenseSource.APP, until)
+
+        val rows = repository.observeCategoryExpenses(cafe, september).first()
+
+        assertEquals(listOf("ultimo", "primero"), rows.map { it.note })
+    }
+
+    @Test
+    fun `detalle de categoria respeta la zona horaria al cortar el mes`() = runTest {
+        // En Madrid (UTC+2 en septiembre) las 00:30 del 1 de octubre son las 22:30 UTC del 30.
+        val september = YearMonth.of(2026, 9)
+        repository.addExpense(
+            100, cafe, "dentro", ExpenseSource.APP,
+            at(java.time.LocalDateTime.of(2026, 9, 30, 23, 59)),
+        )
+        repository.addExpense(
+            200, cafe, "fuera", ExpenseSource.APP,
+            at(java.time.LocalDateTime.of(2026, 10, 1, 0, 30)),
+        )
+
+        val rows = repository.observeCategoryExpenses(cafe, september).first()
+
+        assertEquals(listOf("dentro"), rows.map { it.note })
+    }
+
+    @Test
+    fun `detalle de categoria conserva las notas nulas y la categoria archivada`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        repository.addExpense(200, gasoil, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 3)))
+        repository.addExpense(300, gasoil, "depósito lleno", ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 4)))
+        // Archivada: deja de ofrecerse, pero sus gastos tienen que seguir viéndose.
+        FakeCategoryDao(store).archive(gasoil)
+
+        val rows = repository.observeCategoryExpenses(gasoil, september).first()
+
+        assertEquals(listOf("depósito lleno", null), rows.map { it.note })
+        assertEquals("Gasoil", rows.first().categoryName)
+    }
+
+    @Test
+    fun `el total del detalle coincide con la fila de la categoria en el desglose`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        repository.addExpense(250, cafe, null, ExpenseSource.WIDGET, at(LocalDate.of(2026, 9, 1)))
+        repository.addExpense(325, cafe, "tostada", ExpenseSource.APP, at(LocalDate.of(2026, 9, 30)))
+        repository.addExpense(1500, ocio, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 20)))
+        repository.addExpense(777, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 10, 1)))
+
+        val summary = repository.observeMonthlySummary(september).first()
+
+        summary.breakdown.forEach { share ->
+            val detail = repository.observeCategoryExpenses(share.categoryId, september).first()
+            assertEquals(share.totalCents, detail.sumOf { it.amountCents })
+        }
+    }
+
+    @Test
+    fun `detalle de categoria se actualiza al editar o borrar un gasto`() = runTest {
+        val september = YearMonth.of(2026, 9)
+        val id = repository.addExpense(200, cafe, null, ExpenseSource.APP, at(LocalDate.of(2026, 9, 3)))
+
+        repository.updateExpense(id, 200, ocio, "se movió")
+
+        assertTrue(repository.observeCategoryExpenses(cafe, september).first().isEmpty())
+        assertEquals(
+            listOf("se movió"),
+            repository.observeCategoryExpenses(ocio, september).first().map { it.note },
+        )
+    }
+
     @Test
     fun `onChanged fires once per write`() = runTest {
         var notifications = 0

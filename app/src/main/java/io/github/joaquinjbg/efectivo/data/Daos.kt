@@ -102,6 +102,20 @@ interface ExpenseDao {
     )
     suspend fun betweenWithCategory(from: Long, until: Long): List<ExpenseWithCategory>
 
+    /** Los gastos de una categoría dentro de [from, until), del más reciente al más antiguo. */
+    @Query(
+        "SELECT e.id, e.amountCents, e.categoryId, e.timestamp, e.note, e.source, " +
+            "c.name AS categoryName, c.emoji AS categoryEmoji " +
+            "FROM expenses e JOIN categories c ON c.id = e.categoryId " +
+            "WHERE e.categoryId = :categoryId AND e.timestamp >= :from AND e.timestamp < :until " +
+            "ORDER BY e.timestamp DESC, e.id DESC"
+    )
+    fun observeByCategoryBetween(
+        categoryId: Long,
+        from: Long,
+        until: Long,
+    ): Flow<List<ExpenseWithCategory>>
+
     @Query(
         "SELECT " +
             "(SELECT COALESCE(SUM(amountCents), 0) FROM cash_movements) - " +

@@ -138,6 +138,15 @@ class FakeExpenseDao(private val store: FakeStore) : ExpenseDao {
     override suspend fun betweenWithCategory(from: Long, until: Long): List<ExpenseWithCategory> =
         store.sorted(store.expenses.value.filter { it.timestamp in from until until }).map(store::join)
 
+    override fun observeByCategoryBetween(
+        categoryId: Long,
+        from: Long,
+        until: Long,
+    ): Flow<List<ExpenseWithCategory>> = store.expenses.map { list ->
+        store.sorted(list.filter { it.categoryId == categoryId && it.timestamp in from until until })
+            .map(store::join)
+    }
+
     private fun totals(
         dayFrom: Long, dayUntil: Long,
         weekFrom: Long, weekUntil: Long,

@@ -181,6 +181,12 @@ class ExpenseRepository(
         }
     }
 
+    /** Los gastos de una categoría en un mes, para ver en qué se fue su total. */
+    fun observeCategoryExpenses(categoryId: Long, month: YearMonth): Flow<List<ExpenseWithCategory>> {
+        val (from, until) = TimeRanges.month(month, zone)
+        return expenseDao.observeByCategoryBetween(categoryId, from, until)
+    }
+
     suspend fun quickButtonById(id: Long): QuickButton? = quickButtonDao.getById(id)
 
     suspend fun categories(): List<Category> = categoryDao.getAll()

@@ -107,7 +107,7 @@ private fun Header(category: CategoryShare, month: YearMonth, expenses: List<Exp
         if (expenses != null) {
             Text(
                 euro(expenses.sumOf { it.amountCents }),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
             )

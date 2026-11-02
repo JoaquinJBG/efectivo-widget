@@ -110,7 +110,7 @@ private fun layoutFor(
     val compact = heightDp < WidgetStyle.COMPACT_BELOW
     val usableWidth = (widthDp - WidgetStyle.OUTER_PADDING).coerceAtLeast(WidgetStyle.CATEGORY_MIN_WIDTH)
 
-    // Cuatro por fila es la forma para la que está pensado; si no cabe, menos.
+    // Tres por fila es la forma para la que está pensado; si no cabe, menos.
     val categoryColumns = columnsFor(usableWidth, WidgetStyle.CATEGORY_MIN_WIDTH, MAX_CATEGORY_COLUMNS)
         .coerceAtMost(WidgetStyle.CATEGORY_COLUMNS)
     // Las monedas llenan su fila en vez de dejar huecos al final.

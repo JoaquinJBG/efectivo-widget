@@ -12,7 +12,8 @@ el importe es variable. No hay confirmaciones ni diálogos por medio.
 - **Saldo en efectivo siempre a la vista**, junto al gasto de hoy, de la semana y del mes.
 - **Botones configurables**: etiqueta, emoji e importe fijo, o "preguntar importe".
 - **Historial del día en el propio widget**, con una ✕ por fila para corregir errores.
-- **Resumen mensual** por categoría, con importes y porcentajes.
+- **Resumen mensual** por categoría, con importes y porcentajes. Al pulsar una categoría
+  se abre la lista de sus gastos de ese mes, con día, importe y nota.
 - **Entradas de efectivo** (retirada del cajero) y correcciones a la baja.
 
 <p align="center">
@@ -34,7 +35,7 @@ Efectivo es software libre, con licencia [MIT](LICENSE): puedes usarlo, modifica
 repartirlo. El APK ya compilado está en la página de
 [Releases](https://github.com/JoaquinJBG/efectivo-widget/releases).
 
-1. Descarga `efectivo-v1.1-debug.apk` desde el móvil.
+1. Descarga `efectivo-v1.2-debug.apk` desde el móvil.
 2. Android pedirá permiso para instalar apps de orígenes desconocidos para el navegador o
    el gestor de archivos que lo haya descargado (`Ajustes` → `Seguridad` o `Aplicaciones` →
    *Instalar apps desconocidas*). Concédelo solo a esa app.
@@ -156,7 +157,7 @@ con un mensaje claro si no hay ninguno conectado.
 
 ## Tests
 
-28 tests unitarios sobre el repositorio, que corren en la JVM con dobles en memoria de los
+42 tests unitarios sobre el repositorio, que corren en la JVM con dobles en memoria de los
 DAO de Room: cálculo del saldo, límites de día, semana y mes, desglose mensual, borrado por
 id y el ciclo de vida de botones y categorías.
 

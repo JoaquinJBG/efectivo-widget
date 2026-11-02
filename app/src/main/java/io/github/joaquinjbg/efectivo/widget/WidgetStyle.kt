@@ -119,8 +119,8 @@ object WidgetStyle {
 
     // ─── BOTONES DE CATEGORÍA (Café, Desayuno…) ─────────────────────────
 
-    /** Cuántos caben por fila como mucho. */
-    const val CATEGORY_COLUMNS = 4
+    /** Cuántos caben por fila como mucho. Con tres, "Desayuno" cabe entero. */
+    const val CATEGORY_COLUMNS = 3
 
     /** Ancho mínimo de uno; si no caben, se ponen menos columnas. */
     const val CATEGORY_MIN_WIDTH = 64f

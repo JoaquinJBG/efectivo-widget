@@ -4,7 +4,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +35,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -182,24 +187,22 @@ private fun FilterRow(active: HistoryFilter, onSelect: (HistoryFilter) -> Unit) 
 
 @Composable
 private fun DayHeader(day: DaySection) {
-    Row(
+    DayHeaderLayout(
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .padding(top = 20.dp, bottom = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            Dates.dayLabel(day.date),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false).padding(end = 10.dp),
-        )
+        title = {
+            Text(
+                Dates.dayLabel(day.date),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
         // Los dos totales por separado: sumarlos escondería la retirada del cajero.
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        totals = {
             if (day.receivedCents != 0L) {
                 Text(
                     "+" + euro(day.receivedCents),
@@ -219,6 +222,50 @@ private fun DayHeader(day: DaySection) {
                     maxLines = 1,
                     softWrap = false,
                 )
+            }
+        },
+    )
+}
+
+/**
+ * Nombre del día a la izquierda y totales a la derecha en una sola línea; si no caben
+ * (día largo, importes grandes, fuente grande) los totales pasan a una segunda línea,
+ * alineados a la derecha. Los importes nunca se parten ni se recortan.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DayHeaderLayout(
+    modifier: Modifier,
+    title: @Composable () -> Unit,
+    totals: @Composable () -> Unit,
+) {
+    Layout(
+        content = {
+            Box { title() }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) { totals() }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val gap = 10.dp.roundToPx()
+        val titlePlaceable = measurables[0].measure(Constraints(maxWidth = width))
+        val totalsPlaceable = measurables[1].measure(Constraints(maxWidth = width))
+        val sideBySide = titlePlaceable.width + gap + totalsPlaceable.width <= width
+        val height = if (sideBySide) {
+            maxOf(titlePlaceable.height, totalsPlaceable.height)
+        } else {
+            titlePlaceable.height + totalsPlaceable.height
+        }
+        layout(width, height) {
+            if (sideBySide) {
+                titlePlaceable.placeRelative(0, (height - titlePlaceable.height) / 2)
+                totalsPlaceable.placeRelative(width - totalsPlaceable.width, (height - totalsPlaceable.height) / 2)
+            } else {
+                titlePlaceable.placeRelative(0, 0)
+                totalsPlaceable.placeRelative(width - totalsPlaceable.width, titlePlaceable.height)
             }
         }
     }
@@ -246,7 +293,7 @@ private fun EntryRow(
                 conceptOf(entry),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             val time = Instant.ofEpochMilli(entry.timestamp)

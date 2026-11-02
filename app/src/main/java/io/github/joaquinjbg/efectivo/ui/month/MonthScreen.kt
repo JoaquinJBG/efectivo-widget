@@ -1,5 +1,6 @@
 package io.github.joaquinjbg.efectivo.ui.month
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,8 @@ fun MonthScreen(modifier: Modifier = Modifier) {
     val viewModel: MonthViewModel = viewModel(factory = AppViewModelFactory)
     val month by viewModel.month.collectAsStateWithLifecycle()
     val summary by viewModel.summary.collectAsStateWithLifecycle()
+    val selected by viewModel.selected.collectAsStateWithLifecycle()
+    val selectedExpenses by viewModel.selectedExpenses.collectAsStateWithLifecycle()
 
     Column(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Row(
@@ -94,16 +97,25 @@ fun MonthScreen(modifier: Modifier = Modifier) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 items(summary.breakdown, key = { it.categoryId }) { share ->
-                    CategoryShareRow(share)
+                    CategoryShareRow(share, onClick = { viewModel.select(share) })
                 }
             }
         }
     }
+
+    selected?.let { category ->
+        CategoryExpensesSheet(
+            category = category,
+            month = month,
+            expenses = selectedExpenses,
+            onDismiss = viewModel::clearSelection,
+        )
+    }
 }
 
 @Composable
-private fun CategoryShareRow(share: CategoryShare) {
-    Column(Modifier.fillMaxWidth()) {
+private fun CategoryShareRow(share: CategoryShare, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

@@ -50,59 +50,65 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var sheet by remember { mutableStateOf(Sheet.NONE) }
 
-    Column(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Efectivo disponible",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        FitText(
-            euro(state.balanceCents),
-            fontSize = 56.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(12.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "Hoy",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                euro(state.todayTotalCents),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+    // Todo en una sola lista con scroll: en horizontal la cabecera ocupa la pantalla entera
+    // y, con una columna fija, los gastos de hoy quedaban fuera de la pantalla.
+    LazyColumn(modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+        item {
+            Column {
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "Efectivo disponible",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FitText(
+                    euro(state.balanceCents),
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Hoy",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        euro(state.todayTotalCents),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
 
-        Spacer(Modifier.height(20.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigButton("Gasto", onClick = { sheet = Sheet.EXPENSE }, modifier = Modifier.weight(1f))
-            BigButton("Efectivo", onClick = { sheet = Sheet.CASH }, modifier = Modifier.weight(1f))
-        }
+                Spacer(Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BigButton("Gasto", onClick = { sheet = Sheet.EXPENSE }, modifier = Modifier.weight(1f))
+                    BigButton("Efectivo", onClick = { sheet = Sheet.CASH }, modifier = Modifier.weight(1f))
+                }
 
-        Spacer(Modifier.height(20.dp))
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                Spacer(Modifier.height(20.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            }
+        }
 
         if (state.todayExpenses.isEmpty()) {
-            Spacer(Modifier.height(24.dp))
-            Text(
-                "Todavía no hay gastos hoy",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            item {
+                Text(
+                    "Todavía no hay gastos hoy",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+            }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(state.todayExpenses, key = { it.id }) { expense ->
-                    ExpenseRow(expense)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-                }
+            items(state.todayExpenses, key = { it.id }) { expense ->
+                ExpenseRow(expense)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             }
         }
     }

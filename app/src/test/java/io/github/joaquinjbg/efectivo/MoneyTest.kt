@@ -17,6 +17,15 @@ class MoneyTest {
     }
 
     @Test
+    fun `signed form puts a plus only on positive amounts`() {
+        assertEquals("+12,50 €", Money.formatSigned(1250))
+        assertEquals("+1.234,50 €", Money.formatSigned(123450))
+        assertEquals("-5,00 €", Money.formatSigned(-500))
+        assertEquals("0,00 €", Money.formatSigned(0))
+        assertEquals("+2,00€", Money.formatSigned(200, spaced = false))
+    }
+
+    @Test
     fun `short form drops zero decimals`() {
         assertEquals("2 €", Money.formatShort(200))
         assertEquals("2,50 €", Money.formatShort(250))

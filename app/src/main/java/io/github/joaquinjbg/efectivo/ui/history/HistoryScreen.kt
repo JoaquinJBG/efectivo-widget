@@ -47,6 +47,7 @@ import io.github.joaquinjbg.efectivo.data.LedgerEntry
 import io.github.joaquinjbg.efectivo.data.MovementType
 import io.github.joaquinjbg.efectivo.ui.AppViewModelFactory
 import io.github.joaquinjbg.efectivo.ui.common.euro
+import io.github.joaquinjbg.efectivo.ui.common.signedEuro
 import io.github.joaquinjbg.efectivo.ui.theme.Accent
 import io.github.joaquinjbg.efectivo.util.Dates
 import java.time.Instant
@@ -205,7 +206,7 @@ private fun DayHeader(day: DaySection) {
         totals = {
             if (day.receivedCents != 0L) {
                 Text(
-                    "+" + euro(day.receivedCents),
+                    signedEuro(day.receivedCents),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Accent,
@@ -307,8 +308,7 @@ private fun EntryRow(
             )
         }
         Text(
-            if (isIncome && entry.amountCents > 0) "+" + euro(entry.amountCents)
-            else euro(entry.amountCents),
+            if (isIncome) signedEuro(entry.amountCents) else euro(entry.amountCents),
             style = MaterialTheme.typography.titleLarge,
             color = if (isIncome) Accent else MaterialTheme.colorScheme.onBackground,
             maxLines = 1,

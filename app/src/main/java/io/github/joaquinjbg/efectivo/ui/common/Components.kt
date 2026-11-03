@@ -148,3 +148,6 @@ fun BigButton(
 }
 
 fun euro(cents: Long): String = Money.format(cents)
+
+/** [euro] con "+" delante si es positivo; para entradas de efectivo y sus totales. */
+fun signedEuro(cents: Long): String = Money.formatSigned(cents)

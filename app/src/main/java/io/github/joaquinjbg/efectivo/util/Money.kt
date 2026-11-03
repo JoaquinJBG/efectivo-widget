@@ -12,6 +12,13 @@ object Money {
     fun format(cents: Long, spaced: Boolean = true): String =
         formatNumber(cents) + (if (spaced) " " else "") + "€"
 
+    /**
+     * Como [format], pero con "+" delante si es positivo: "+12,50 €". El negativo ya lleva su
+     * "-" ("-5,00 €") y el cero va sin signo; antes se pegaba "+" a todo y salía "+-5,00 €".
+     */
+    fun formatSigned(cents: Long, spaced: Boolean = true): String =
+        (if (cents > 0) "+" else "") + format(cents, spaced)
+
     fun formatNumber(cents: Long): String {
         val sign = if (cents < 0) "-" else ""
         val abs = cents.absoluteValue
